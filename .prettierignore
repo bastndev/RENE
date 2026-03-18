@@ -1,0 +1,9 @@
+# ignore json files
+package.json
+tsconfig.json
+
+# src/extension.ts
+src/extensions/
+
+# Others
+REAMDE.md
