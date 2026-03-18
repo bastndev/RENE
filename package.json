@@ -8,29 +8,11 @@
   "engines": {
     "vscode": "^1.74.0"
   },
-  "categories": [
-    "Other",
-    "Linters",
-    "Machine Learning",
-    "Visualization",
-    "Programming Languages"
-  ],
+  "categories": ["Other"],
   "keywords": [
-    "developer-tools",
-    "cursor-settings",
-    "image-preview",
-    "RENE extension",
-    "productivity",
-    "highlighting",
-    "error-lens",
-    "markdown",
-    "auto-tag",
-    "env-lens",
-    "mdx",
-    "git",
-    "svg",
-    "tts",
-    "ai"
+    "Youtube Music",
+    "Pomodoro",
+    "developer-tools"
   ],
   "icon": "icon.png",
   "galleryBanner": {
