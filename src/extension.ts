@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { oneGameProvider, pomodoroProvider, ytMusicProvider } from './panels';
+import { oneGameProvider, pomodoroProvider, ytMusicProvider } from './panels/panels';
 
 export function activate(context: vscode.ExtensionContext) {
 

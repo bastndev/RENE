@@ -44,7 +44,7 @@
         {
           "id": "rene-activitybar",
           "title": "R E N E",
-          "icon": "src/assets/icon-rene.svg"
+          "icon": "src/assets/icons/icon-rene.svg"
         }
       ]
     },
