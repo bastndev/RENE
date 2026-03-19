@@ -53,7 +53,7 @@
         {
           "type": "webview",
           "id": "rene-yt-music-view",
-          "name": "RENE YT MusIc",
+          "name": "RENE MUSIC",
           "icon": "$(music)"
         }
       ],

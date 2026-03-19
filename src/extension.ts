@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { oneGameProvider, pomodoroProvider, ytListProvider } from './panels/panels';
-import { YouTubeMusicViewProvider } from './view/index';
+import { YouTubeMusicViewProvider } from './view/view';
 
 export function activate(context: vscode.ExtensionContext) {
 
