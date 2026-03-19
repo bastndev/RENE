@@ -105,10 +105,14 @@
 
         showScreen('player');
 
-        // Set track info in header
+        // Set track info in header (white title + gray artist)
         const trackInfo = $('#player-track-info');
         if (trackInfo) {
-            trackInfo.textContent = track.title;
+            trackInfo.innerHTML = `
+                <span class="header-track-title">${escapeHtml(track.title)}</span>
+                <span class="header-track-separator"> - </span>
+                <span class="header-track-artist">${escapeHtml(track.artist)}</span>
+            `;
         }
 
         // Render player IMMEDIATELY with data from search results
