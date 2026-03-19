@@ -1,11 +1,15 @@
 (function () {
     const vscode = acquireVsCodeApi();
+
+    // Audio created but never auto-played
     const audio = new Audio();
+    audio.preload = 'none';
 
     // --- State ---
     let results = [];
     let currentIndex = -1;
     let isPlaying = false;
+    let isMuted = false;
 
     // --- DOM helpers ---
     const $ = (s) => document.querySelector(s);
@@ -32,7 +36,7 @@
         return d.innerHTML;
     }
 
-    // --- Skeleton generators ---
+    // --- Skeleton for results only ---
     function showResultsSkeleton() {
         const container = $('#results-container');
         container.innerHTML = '';
@@ -47,22 +51,6 @@
                 </div>`;
             container.appendChild(el);
         }
-    }
-
-    function showPlayerSkeleton() {
-        const container = $('#player-container');
-        container.innerHTML = `
-            <div class="player-skeleton">
-                <div class="skeleton player-art-skeleton"></div>
-                <div class="skeleton skeleton-line medium" style="width:65%;height:14px;margin-top:4px"></div>
-                <div class="skeleton skeleton-line short" style="width:40%;height:10px;margin-top:8px"></div>
-                <div class="skeleton skeleton-line long" style="width:90%;height:4px;margin-top:22px"></div>
-                <div class="player-controls-skeleton" style="margin-top:18px">
-                    <div class="skeleton skeleton-circle" style="width:32px;height:32px"></div>
-                    <div class="skeleton skeleton-circle" style="width:48px;height:48px"></div>
-                    <div class="skeleton skeleton-circle" style="width:32px;height:32px"></div>
-                </div>
-            </div>`;
     }
 
     // --- Search ---
@@ -99,77 +87,133 @@
                         ${escapeHtml(item.artist)}${item.album ? ` · ${escapeHtml(item.album)}` : ''} · ${formatDuration(item.duration)}
                     </div>
                 </div>`;
-            el.addEventListener('click', () => playTrack(i));
+            el.addEventListener('click', () => selectTrack(i));
             container.appendChild(el);
         });
     }
 
-    // --- Play track ---
-    function playTrack(index) {
+    // --- Select track: show player INSTANTLY with search data (NO API call) ---
+    function selectTrack(index) {
         currentIndex = index;
         const track = results[index];
         if (!track) { return; }
+
+        // Stop any current audio
+        audio.pause();
+        audio.removeAttribute('src');
+        isPlaying = false;
+
         showScreen('player');
-        showPlayerSkeleton();
-        vscode.postMessage({ type: 'getStream', videoId: track.videoId });
+
+        // Set track info in header
+        const trackInfo = $('#player-track-info');
+        if (trackInfo) {
+            trackInfo.textContent = track.title;
+        }
+
+        // Render player IMMEDIATELY with data from search results
+        renderPlayerUI(track);
     }
 
-    // --- Render player ---
-    function renderPlayer(data) {
+    // --- Render player UI instantly (no skeleton, no API, no album art) ---
+    function renderPlayerUI(track) {
         const container = $('#player-container');
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex < results.length - 1;
+
         container.innerHTML = `
             <div class="player-content">
-                <img class="player-art" src="${escapeHtml(data.thumbnail)}" alt=""
-                     onerror="this.style.background='rgba(128,128,128,0.15)'">
-                <div class="player-title">${escapeHtml(data.title)}</div>
-                <div class="player-artist">${escapeHtml(data.artist)}${data.album ? ` • ${escapeHtml(data.album)}` : ''}</div>
                 <div class="player-progress">
                     <span id="current-time">0:00</span>
                     <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
-                    <span id="total-time">${formatDuration(data.duration)}</span>
+                    <span id="total-time">${formatDuration(track.duration)}</span>
                 </div>
                 <div class="player-controls">
-                    <button id="prev-btn" class="control-btn" aria-label="Previous">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                        </svg>
+                    </button>
+                    <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                         </svg>
                     </button>
                     <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
-                        <svg id="icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        <svg id="icon-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none">
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path id="play-path" d="M8 5v14l11-7z"/>
                         </svg>
                     </button>
-                    <button id="next-btn" class="control-btn" aria-label="Next">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+                    <button id="repeat-btn" class="control-btn control-btn-sm" aria-label="Repeat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
                         </svg>
                     </button>
                 </div>
             </div>`;
 
-        // Start audio
-        audio.src = data.url;
-        audio.play().then(() => {
-            isPlaying = true;
-            updatePlayPauseIcon();
-        }).catch(() => {
-            isPlaying = false;
-            updatePlayPauseIcon();
-        });
-
         setupPlayerEvents();
     }
 
+    // --- Request stream and play (called when user presses Play) ---
+    function requestStreamAndPlay() {
+        const track = results[currentIndex];
+        if (!track) { return; }
+
+        // Request stream URL from extension backend
+        vscode.postMessage({ type: 'getStream', videoId: track.videoId });
+    }
+
+    // --- When stream is ready, set audio src and play ---
+    function onStreamReady(data) {
+        if (data.url) {
+            audio.src = data.url;
+            audio.play().then(() => {
+                isPlaying = true;
+                updatePlayPauseIcon();
+            }).catch(() => {
+                isPlaying = false;
+                updatePlayPauseIcon();
+                showPlayerError('Could not play this track.\nTry another one.');
+            });
+        }
+    }
+
+    // --- Show error in player without destroying controls ---
+    function showPlayerError(text) {
+        const container = $('#player-container');
+        if (container) {
+            container.innerHTML = `<div class="error-msg">${escapeHtml(text)}</div>`;
+        }
+        isPlaying = false;
+    }
+
     // --- Player controls ---
+    // Single SVG path-swap (avoids display:flex vs display:none conflicts)
+    const PATH_PLAY  = 'M8 5v14l11-7z';
+    const PATH_PAUSE = 'M6 19h4V5H6v14zm8-14v14h4V5h-4z';
+
     function updatePlayPauseIcon() {
-        const play = $('#icon-play');
-        const pause = $('#icon-pause');
-        if (!play || !pause) { return; }
-        play.style.display  = isPlaying ? 'none' : 'block';
-        pause.style.display = isPlaying ? 'block' : 'none';
+        const pp = $('#play-path');
+        if (!pp) { return; }
+        pp.setAttribute('d', isPlaying ? PATH_PAUSE : PATH_PLAY);
+        const btn = $('#play-pause-btn');
+        if (btn) { btn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play'); }
+    }
+
+    function updateVolumeIcon() {
+        const volPath = $('#vol-path');
+        if (!volPath) { return; }
+        if (isMuted) {
+            volPath.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z');
+        } else {
+            volPath.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+        }
     }
 
     function setupPlayerEvents() {
@@ -177,29 +221,43 @@
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
         const progressBar = $('#progress-bar');
+        const volumeBtn = $('#volume-btn');
+        const repeatBtn = $('#repeat-btn');
 
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
                 if (isPlaying) {
+                    // Pause
                     audio.pause();
                     isPlaying = false;
+                    updatePlayPauseIcon();
                 } else {
-                    audio.play();
-                    isPlaying = true;
+                    // If no src loaded yet, request stream from API
+                    if (!audio.src || audio.src === '' || audio.src === location.href) {
+                        requestStreamAndPlay();
+                    } else {
+                        // Resume
+                        audio.play().then(() => {
+                            isPlaying = true;
+                            updatePlayPauseIcon();
+                        }).catch(() => {
+                            isPlaying = false;
+                            updatePlayPauseIcon();
+                        });
+                    }
                 }
-                updatePlayPauseIcon();
             });
         }
 
-        if (prevBtn) {
+        if (prevBtn && !prevBtn.classList.contains('disabled')) {
             prevBtn.addEventListener('click', () => {
-                if (currentIndex > 0) { playTrack(currentIndex - 1); }
+                if (currentIndex > 0) { selectTrack(currentIndex - 1); }
             });
         }
 
-        if (nextBtn) {
+        if (nextBtn && !nextBtn.classList.contains('disabled')) {
             nextBtn.addEventListener('click', () => {
-                if (currentIndex < results.length - 1) { playTrack(currentIndex + 1); }
+                if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
             });
         }
 
@@ -208,6 +266,21 @@
                 if (audio.duration) {
                     audio.currentTime = (e.target.value / 1000) * audio.duration;
                 }
+            });
+        }
+
+        if (volumeBtn) {
+            volumeBtn.addEventListener('click', () => {
+                isMuted = !isMuted;
+                audio.muted = isMuted;
+                updateVolumeIcon();
+            });
+        }
+
+        if (repeatBtn) {
+            repeatBtn.addEventListener('click', () => {
+                audio.loop = !audio.loop;
+                repeatBtn.style.opacity = audio.loop ? '1' : '';
             });
         }
     }
@@ -230,19 +303,17 @@
     });
 
     audio.addEventListener('ended', () => {
-        if (currentIndex < results.length - 1) {
-            playTrack(currentIndex + 1);
-        } else {
+        if (!audio.loop && currentIndex < results.length - 1) {
+            selectTrack(currentIndex + 1);
+        } else if (!audio.loop) {
             isPlaying = false;
             updatePlayPauseIcon();
         }
     });
 
     audio.addEventListener('error', () => {
-        const container = $('#player-container');
-        if (container) {
-            container.innerHTML = '<div class="error-msg">Could not play this track.<br>Try another one.</div>';
-        }
+        if (!audio.src || audio.src === '' || audio.src === location.href) { return; }
+        showPlayerError('Could not play this track.\nTry another one.');
     });
 
     // --- Messages from extension ---
@@ -253,7 +324,7 @@
                 renderResults(msg.results);
                 break;
             case 'streamReady':
-                renderPlayer(msg);
+                onStreamReady(msg);
                 break;
             case 'error':
                 handleError(msg.message);
@@ -302,6 +373,8 @@
     const backToSearch = $('#back-to-search');
     if (backToSearch) {
         backToSearch.addEventListener('click', () => {
+            audio.pause();
+            isPlaying = false;
             showScreen('search');
         });
     }
@@ -309,6 +382,8 @@
     const backToResults = $('#back-to-results');
     if (backToResults) {
         backToResults.addEventListener('click', () => {
+            audio.pause();
+            isPlaying = false;
             showScreen('results');
         });
     }
