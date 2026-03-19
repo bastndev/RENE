@@ -67,15 +67,221 @@
     }
 
     function onPlayerError(event) {
-        console.error("Player Error:", event.data);
-        showPlayerError('Could not play this track. It might be restricted for embedding.');
+        const errorCodes = {
+            2: 'Invalid parameter',
+            5: 'HTML5 player error',
+            100: 'Video not found',
+            101: 'Video cannot be played embedded (region/copyright restriction)',
+            150: 'Same as 101 (embedded not allowed)'
+        };
+
+        const errorMsg = errorCodes[event.data] || `Error code: ${event.data}`;
+        console.error("[RENE] YouTube Player Error:", errorMsg);
+
+        // TRY FALLBACK: Si YouTube falla, intentar con Deezer o siguiente resultado
+        handlePlaybackError();
+    }
+
+    function handlePlaybackError() {
+        const currentTrack = results[currentIndex];
+        
+        // Opción 1: Si el track tiene preview de Deezer, reproducirlo
+        if (currentTrack && currentTrack.preview) {
+            console.log("[RENE] Fallback: Reproduciendo preview de Deezer...");
+            playDeezerPreview(currentTrack);
+            return;
+        }
+
+        // Opción 2: Si no, intentar con el siguiente track (buscar el primero que tenga preview)
+        if (results.length > 1) {
+            console.log("[RENE] Fallback: Intentando siguiente resultado...");
+            let nextPlayable = -1;
+            
+            // Buscar desde el siguiente hasta el final
+            for (let i = currentIndex + 1; i < results.length; i++) {
+                if (results[i].preview || results[i].videoId) {
+                    nextPlayable = i;
+                    break;
+                }
+            }
+
+            // Si no encontró después, buscar desde el principio
+            if (nextPlayable === -1) {
+                for (let i = 0; i < currentIndex; i++) {
+                    if (results[i].preview || results[i].videoId) {
+                        nextPlayable = i;
+                        break;
+                    }
+                }
+            }
+
+            if (nextPlayable !== -1) {
+                selectTrack(nextPlayable);
+                return;
+            }
+        }
+
+        // Opción 3: Si nada funciona, mostrar error
+        const track = results[currentIndex];
+        const alternativeMsg = track 
+            ? `<div class="error-msg">
+                <strong>${escapeHtml(track.title)}</strong> no se puede reproducir en YouTube. <br>
+                Intentando alternativas... <br><br>
+                <small>Razón: Restricción de región/copyright</small>
+              </div>`
+            : '<div class="error-msg">No se puede reproducir este track</div>';
+
+        showPlayerError(alternativeMsg);
+    }
+
+    // Reproductor alternativo para Deezer Preview
+    let deezerAudio = null;
+
+    function playDeezerPreview(track) {
+        if (!track.preview) {
+            showPlayerError('No preview available for this track');
+            return;
+        }
+
+        // Limpiar reproductor anterior
+        if (deezerAudio) {
+            deezerAudio.pause();
+            deezerAudio = null;
+        }
+
+        // Crear reproductor de audio para preview
+        const container = $('#player-container');
+        if (container) {
+            const hasPrev = currentIndex > 0;
+            const hasNext = currentIndex < results.length - 1;
+
+            container.innerHTML = `
+                <div class="player-content">
+                    <div class="player-progress">
+                        <span id="current-time">0:00</span>
+                        <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
+                        <span id="total-time">0:30</span>
+                    </div>
+                    <div class="player-controls">
+                        <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                        </button>
+                        <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                            </svg>
+                        </button>
+                        <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <path id="play-path" d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                        <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>`;
+
+            // Crear elemento de audio
+            deezerAudio = new Audio(track.preview);
+            deezerAudio.crossOrigin = 'anonymous';
+            
+            deezerAudio.onplay = () => {
+                isPlaying = true;
+                updatePlayPauseIcon();
+                startProgressLoop();
+            };
+
+            deezerAudio.onpause = () => {
+                isPlaying = false;
+                updatePlayPauseIcon();
+                stopProgressLoop();
+            };
+
+            deezerAudio.onended = () => {
+                isPlaying = false;
+                updatePlayPauseIcon();
+                stopProgressLoop();
+                if (currentIndex < results.length - 1) {
+                    selectTrack(currentIndex + 1);
+                }
+            };
+
+            deezerAudio.ontimeupdate = () => {
+                const bar = $('#progress-bar');
+                const cur = $('#current-time');
+                if (bar && deezerAudio.duration) {
+                    bar.value = (deezerAudio.currentTime / deezerAudio.duration) * 1000;
+                }
+                if (cur) {
+                    cur.textContent = formatDuration(Math.floor(deezerAudio.currentTime));
+                }
+            };
+
+            // Setup eventos del reproductor
+            const playPauseBtn = $('#play-pause-btn');
+            const prevBtn = $('#prev-btn');
+            const nextBtn = $('#next-btn');
+            const progressBar = $('#progress-bar');
+            const volumeBtn = $('#volume-btn');
+
+            if (playPauseBtn) {
+                playPauseBtn.addEventListener('click', () => {
+                    if (isPlaying) {
+                        deezerAudio.pause();
+                    } else {
+                        deezerAudio.play();
+                    }
+                });
+            }
+
+            if (prevBtn && !prevBtn.classList.contains('disabled')) {
+                prevBtn.addEventListener('click', () => {
+                    if (currentIndex > 0) { selectTrack(currentIndex - 1); }
+                });
+            }
+
+            if (nextBtn && !nextBtn.classList.contains('disabled')) {
+                nextBtn.addEventListener('click', () => {
+                    if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
+                });
+            }
+
+            if (progressBar) {
+                progressBar.addEventListener('input', (e) => {
+                    if (deezerAudio && deezerAudio.duration) {
+                        const seekTo = (e.target.value / 1000) * deezerAudio.duration;
+                        deezerAudio.currentTime = seekTo;
+                    }
+                });
+            }
+
+            if (volumeBtn) {
+                volumeBtn.addEventListener('click', () => {
+                    isMuted = !isMuted;
+                    deezerAudio.muted = isMuted;
+                    updateVolumeIcon();
+                });
+            }
+
+            // Reproducir automáticamente
+            deezerAudio.play();
+        }
     }
 
     // --- Progress Loop ---
     function startProgressLoop() {
         stopProgressLoop();
         progressTimer = setInterval(() => {
-            if (ytPlayer && ytPlayer.getCurrentTime) {
+            if (deezerAudio && deezerAudio.duration) {
+                // Deezer preview
+                updateProgressBar(deezerAudio.currentTime, deezerAudio.duration);
+            } else if (ytPlayer && ytPlayer.getCurrentTime) {
+                // YouTube
                 const currentTime = ytPlayer.getCurrentTime();
                 const duration = ytPlayer.getDuration();
                 updateProgressBar(currentTime, duration);
@@ -191,6 +397,12 @@
 
         showScreen('player');
 
+        // Limpiar reproductor Deezer si estaba activo
+        if (deezerAudio) {
+            deezerAudio.pause();
+            deezerAudio = null;
+        }
+
         // Set track info in header
         const trackInfo = $('#player-track-info');
         if (trackInfo) {
@@ -201,14 +413,22 @@
             `;
         }
 
-        renderPlayerUI(track);
-
         // Load the video in the hidden player
-        if (ytPlayer && ytPlayer.loadVideoById) {
+        if (track.videoId && ytPlayer && ytPlayer.loadVideoById) {
+            renderPlayerUI(track);
             ytPlayer.loadVideoById(track.videoId);
             ytPlayer.playVideo();
+        } else if (track.preview) {
+            // Si no tiene videoId pero tiene preview de Deezer, reproducir preview
+            playDeezerPreview(track);
         } else {
-            showPlayerError('YouTube Player not ready yet. Please wait a moment.');
+            // Si no tiene preview, buscar siguiente resultado que sí tenga
+            const nextPlayable = results.findIndex((t, idx) => idx > index && (t.videoId || t.preview));
+            if (nextPlayable !== -1) {
+                selectTrack(nextPlayable);
+            } else {
+                showPlayerError('No playable track available in this list');
+            }
         }
     }
 
