@@ -49,6 +49,14 @@
       ]
     },
     "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "rene-yt-music-view",
+          "name": "RENE YT MusIc",
+          "icon": "$(music)"
+        }
+      ],
       "rene-activitybar": [
         {
           "id": "rene-one-game-view",
@@ -61,9 +69,9 @@
           "icon": "$(clock)"
         },
         {
-          "id": "rene-yt-music-view",
-          "name": "YT Music",
-          "icon": "$(music)"
+          "id": "rene-yt-list-view",
+          "name": "Youtube List",
+          "icon": "$(list-unordered)"
         }
       ]
     }

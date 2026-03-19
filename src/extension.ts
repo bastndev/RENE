@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { oneGameProvider, pomodoroProvider, ytMusicProvider } from './panels/panels';
+import { oneGameProvider, pomodoroProvider, ytListProvider } from './panels/panels';
+import { YouTubeMusicViewProvider } from './view/index';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -15,8 +16,12 @@ export function activate(context: vscode.ExtensionContext) {
 			pomodoroProvider
 		),
 		vscode.window.registerTreeDataProvider(
+			'rene-yt-list-view',
+			ytListProvider
+		),
+		vscode.window.registerWebviewViewProvider(
 			'rene-yt-music-view',
-			ytMusicProvider
+			new YouTubeMusicViewProvider(context.extensionUri)
 		)
 	);
 
