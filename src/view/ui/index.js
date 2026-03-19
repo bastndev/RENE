@@ -1,16 +1,110 @@
 (function () {
     const vscode = acquireVsCodeApi();
-    const audio = new Audio();
 
     // --- State ---
     let results = [];
     let currentIndex = -1;
     let isPlaying = false;
-    let lastQuery = '';
+    let isMuted = false;
+    let ytPlayer = null;
+    let playerReady = false;
+    let progressTimer = null;
 
     // --- DOM helpers ---
     const $ = (s) => document.querySelector(s);
     const $$ = (s) => document.querySelectorAll(s);
+
+    // --- YT IFrame Player Setup ---
+    window.onYouTubeIframeAPIReady = function() {
+        ytPlayer = new YT.Player('youtube-player', {
+            height: '360',
+            width: '640',
+            videoId: '',
+            playerVars: {
+                'playsinline': 1,
+                'autoplay': 0,
+                'controls': 0,
+                'disablekb': 1,
+                'fs': 0,
+                'rel': 0,
+                'modestbranding': 1
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange,
+                'onError': onPlayerError
+            }
+        });
+    };
+
+    function onPlayerReady(event) {
+        playerReady = true;
+        console.log("YouTube Player is Ready");
+    }
+
+    function onPlayerStateChange(event) {
+        // YT.PlayerState.PLAYING = 1
+        // YT.PlayerState.PAUSED = 2
+        // YT.PlayerState.ENDED = 0
+        // YT.PlayerState.BUFFERING = 3
+        
+        if (event.data === YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            updatePlayPauseIcon();
+            startProgressLoop();
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            isPlaying = false;
+            updatePlayPauseIcon();
+            stopProgressLoop();
+        } else if (event.data === YT.PlayerState.ENDED) {
+            isPlaying = false;
+            updatePlayPauseIcon();
+            stopProgressLoop();
+            if (currentIndex < results.length - 1) {
+                selectTrack(currentIndex + 1);
+            }
+        }
+    }
+
+    function onPlayerError(event) {
+        console.error("Player Error:", event.data);
+        showPlayerError('Could not play this track. It might be restricted for embedding.');
+    }
+
+    // --- Progress Loop ---
+    function startProgressLoop() {
+        stopProgressLoop();
+        progressTimer = setInterval(() => {
+            if (ytPlayer && ytPlayer.getCurrentTime) {
+                const currentTime = ytPlayer.getCurrentTime();
+                const duration = ytPlayer.getDuration();
+                updateProgressBar(currentTime, duration);
+            }
+        }, 1000);
+    }
+
+    function stopProgressLoop() {
+        if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+    }
+
+    function updateProgressBar(current, total) {
+        const bar = $('#progress-bar');
+        const cur = $('#current-time');
+        const tot = $('#total-time');
+        
+        if (bar && total > 0) {
+            bar.value = (current / total) * 1000;
+        }
+        if (cur) {
+            cur.textContent = formatDuration(Math.floor(current));
+        }
+        if (tot && total > 0) {
+            tot.textContent = formatDuration(Math.floor(total));
+        }
+    }
 
     // --- Screen navigation ---
     function showScreen(name) {
@@ -33,7 +127,7 @@
         return d.innerHTML;
     }
 
-    // --- Skeleton generators ---
+    // --- Skeleton for results only ---
     function showResultsSkeleton() {
         const container = $('#results-container');
         container.innerHTML = '';
@@ -50,27 +144,10 @@
         }
     }
 
-    function showPlayerSkeleton() {
-        const container = $('#player-container');
-        container.innerHTML = `
-            <div class="player-skeleton">
-                <div class="skeleton player-art-skeleton"></div>
-                <div class="skeleton skeleton-line medium" style="width:65%;height:14px;margin-top:4px"></div>
-                <div class="skeleton skeleton-line short" style="width:40%;height:10px;margin-top:8px"></div>
-                <div class="skeleton skeleton-line long" style="width:90%;height:4px;margin-top:22px"></div>
-                <div class="player-controls-skeleton" style="margin-top:18px">
-                    <div class="skeleton skeleton-circle" style="width:32px;height:32px"></div>
-                    <div class="skeleton skeleton-circle" style="width:48px;height:48px"></div>
-                    <div class="skeleton skeleton-circle" style="width:32px;height:32px"></div>
-                </div>
-            </div>`;
-    }
-
     // --- Search ---
     function doSearch(query) {
         query = (query || '').trim();
         if (!query) { return; }
-        lastQuery = query;
         showScreen('results');
         const queryLabel = $('#results-query');
         if (queryLabel) { queryLabel.textContent = `"${query}"`; }
@@ -97,79 +174,117 @@
                      onerror="this.style.background='rgba(128,128,128,0.15)';this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
                 <div class="result-info">
                     <div class="result-title">${escapeHtml(item.title)}</div>
-                    <div class="result-meta">${escapeHtml(item.artist)} · ${formatDuration(item.duration)}</div>
+                    <div class="result-meta">
+                        ${escapeHtml(item.artist)}${item.album ? ` · ${escapeHtml(item.album)}` : ''} · ${formatDuration(item.duration)}
+                    </div>
                 </div>`;
-            el.addEventListener('click', () => playTrack(i));
+            el.addEventListener('click', () => selectTrack(i));
             container.appendChild(el);
         });
     }
 
-    // --- Play track ---
-    function playTrack(index) {
+    // --- Select track: show player + load in hidden YT player ---
+    function selectTrack(index) {
         currentIndex = index;
         const track = results[index];
         if (!track) { return; }
+
         showScreen('player');
-        showPlayerSkeleton();
-        vscode.postMessage({ type: 'getStream', videoId: track.videoId });
+
+        // Set track info in header
+        const trackInfo = $('#player-track-info');
+        if (trackInfo) {
+            trackInfo.innerHTML = `
+                <span class="header-track-title">${escapeHtml(track.title)}</span>
+                <span class="header-track-separator"> - </span>
+                <span class="header-track-artist">${escapeHtml(track.artist)}</span>
+            `;
+        }
+
+        renderPlayerUI(track);
+
+        // Load the video in the hidden player
+        if (ytPlayer && ytPlayer.loadVideoById) {
+            ytPlayer.loadVideoById(track.videoId);
+            ytPlayer.playVideo();
+        } else {
+            showPlayerError('YouTube Player not ready yet. Please wait a moment.');
+        }
     }
 
-    // --- Render player ---
-    function renderPlayer(data) {
+    // --- Render player UI instantly ---
+    function renderPlayerUI(track) {
         const container = $('#player-container');
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex < results.length - 1;
+
         container.innerHTML = `
             <div class="player-content">
-                <img class="player-art" src="${escapeHtml(data.thumbnail)}" alt=""
-                     onerror="this.style.background='rgba(128,128,128,0.15)'">
-                <div class="player-title">${escapeHtml(data.title)}</div>
-                <div class="player-artist">${escapeHtml(data.artist)}</div>
                 <div class="player-progress">
                     <span id="current-time">0:00</span>
                     <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
-                    <span id="total-time">${formatDuration(data.duration)}</span>
+                    <span id="total-time">${formatDuration(track.duration)}</span>
                 </div>
                 <div class="player-controls">
-                    <button id="prev-btn" class="control-btn" aria-label="Previous">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                        </svg>
+                    </button>
+                    <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                         </svg>
                     </button>
                     <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
-                        <svg id="icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8 5v14l11-7z"/>
-                        </svg>
-                        <svg id="icon-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none">
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path id="play-path" d="M8 5v14l11-7z"/>
                         </svg>
                     </button>
-                    <button id="next-btn" class="control-btn" aria-label="Next">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                        </svg>
+                    </button>
+                    <button id="repeat-btn" class="control-btn control-btn-sm" aria-label="Repeat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
                         </svg>
                     </button>
                 </div>
             </div>`;
 
-        // Start audio
-        audio.src = data.url;
-        audio.play().then(() => {
-            isPlaying = true;
-            updatePlayPauseIcon();
-        }).catch(() => {
-            isPlaying = false;
-            updatePlayPauseIcon();
-        });
-
         setupPlayerEvents();
     }
 
+    function showPlayerError(text) {
+        const container = $('#player-container');
+        if (container) {
+            container.innerHTML = `<div class="error-msg">${escapeHtml(text)}</div>`;
+        }
+        isPlaying = false;
+    }
+
     // --- Player controls ---
+    const PATH_PLAY  = 'M8 5v14l11-7z';
+    const PATH_PAUSE = 'M6 19h4V5H6v14zm8-14v14h4V5h-4z';
+
     function updatePlayPauseIcon() {
-        const play = $('#icon-play');
-        const pause = $('#icon-pause');
-        if (!play || !pause) { return; }
-        play.style.display  = isPlaying ? 'none' : 'block';
-        pause.style.display = isPlaying ? 'block' : 'none';
+        const pp = $('#play-path');
+        if (!pp) { return; }
+        pp.setAttribute('d', isPlaying ? PATH_PAUSE : PATH_PLAY);
+        const btn = $('#play-pause-btn');
+        if (btn) { btn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play'); }
+    }
+
+    function updateVolumeIcon() {
+        const volPath = $('#vol-path');
+        if (!volPath) { return; }
+        if (isMuted) {
+            volPath.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z');
+        } else {
+            volPath.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+        }
     }
 
     function setupPlayerEvents() {
@@ -177,73 +292,67 @@
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
         const progressBar = $('#progress-bar');
+        const volumeBtn = $('#volume-btn');
+        const repeatBtn = $('#repeat-btn');
 
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
+                if (!ytPlayer || !playerReady) return;
+                
                 if (isPlaying) {
-                    audio.pause();
-                    isPlaying = false;
+                    ytPlayer.pauseVideo();
                 } else {
-                    audio.play();
-                    isPlaying = true;
+                    ytPlayer.playVideo();
                 }
-                updatePlayPauseIcon();
             });
         }
 
-        if (prevBtn) {
+        if (prevBtn && !prevBtn.classList.contains('disabled')) {
             prevBtn.addEventListener('click', () => {
-                if (currentIndex > 0) { playTrack(currentIndex - 1); }
+                if (currentIndex > 0) { selectTrack(currentIndex - 1); }
             });
         }
 
-        if (nextBtn) {
+        if (nextBtn && !nextBtn.classList.contains('disabled')) {
             nextBtn.addEventListener('click', () => {
-                if (currentIndex < results.length - 1) { playTrack(currentIndex + 1); }
+                if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
             });
         }
 
         if (progressBar) {
             progressBar.addEventListener('input', (e) => {
-                if (audio.duration) {
-                    audio.currentTime = (e.target.value / 1000) * audio.duration;
+                if (ytPlayer && ytPlayer.seekTo) {
+                    const duration = ytPlayer.getDuration();
+                    const seekTo = (e.target.value / 1000) * duration;
+                    ytPlayer.seekTo(seekTo, true);
                 }
             });
         }
+
+        if (volumeBtn) {
+            volumeBtn.addEventListener('click', () => {
+                if (!ytPlayer) return;
+                isMuted = !isMuted;
+                if (isMuted) {
+                    ytPlayer.mute();
+                } else {
+                    ytPlayer.unMute();
+                }
+                updateVolumeIcon();
+            });
+        }
+
+        if (repeatBtn) {
+            // Simplified repeat logic for MVP: just toggle loop on the player
+            repeatBtn.addEventListener('click', () => {
+                // YT Player doesn't have a simple "v.loop = true", but we can handle it in state change
+                // or use a local flag. For now, let's just use a visual toggle.
+                const isLooped = repeatBtn.classList.toggle('active');
+                repeatBtn.style.opacity = isLooped ? '1' : '';
+                // Note: Actual loop logic would be in onPlayerStateChange (if state === ENDED and isLooped, play again)
+            });
+        }
     }
-
-    // --- Audio events ---
-    audio.addEventListener('timeupdate', () => {
-        const bar = $('#progress-bar');
-        const cur = $('#current-time');
-        if (bar && audio.duration) {
-            bar.value = Math.floor((audio.currentTime / audio.duration) * 1000);
-        }
-        if (cur) {
-            cur.textContent = formatDuration(Math.floor(audio.currentTime));
-        }
-    });
-
-    audio.addEventListener('loadedmetadata', () => {
-        const tot = $('#total-time');
-        if (tot) { tot.textContent = formatDuration(Math.floor(audio.duration)); }
-    });
-
-    audio.addEventListener('ended', () => {
-        if (currentIndex < results.length - 1) {
-            playTrack(currentIndex + 1);
-        } else {
-            isPlaying = false;
-            updatePlayPauseIcon();
-        }
-    });
-
-    audio.addEventListener('error', () => {
-        const container = $('#player-container');
-        if (container) {
-            container.innerHTML = '<div class="error-msg">Could not play this track.<br>Try another one.</div>';
-        }
-    });
 
     // --- Messages from extension ---
     window.addEventListener('message', (event) => {
@@ -251,9 +360,6 @@
         switch (msg.type) {
             case 'searchResults':
                 renderResults(msg.results);
-                break;
-            case 'streamReady':
-                renderPlayer(msg);
                 break;
             case 'error':
                 handleError(msg.message);
@@ -289,7 +395,6 @@
         });
     }
 
-    // Quick access buttons
     $$('.qa-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             const query = btn.getAttribute('data-query') || btn.textContent;
@@ -298,11 +403,10 @@
         });
     });
 
-    // Back buttons
     const backToSearch = $('#back-to-search');
     if (backToSearch) {
         backToSearch.addEventListener('click', () => {
-            audio.pause();
+            if (ytPlayer) ytPlayer.pauseVideo();
             isPlaying = false;
             showScreen('search');
         });
@@ -311,8 +415,7 @@
     const backToResults = $('#back-to-results');
     if (backToResults) {
         backToResults.addEventListener('click', () => {
-            audio.pause();
-            isPlaying = false;
+            // Keep playing when going back to results
             showScreen('results');
         });
     }

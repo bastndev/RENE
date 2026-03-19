@@ -21,7 +21,8 @@ export function activate(context: vscode.ExtensionContext) {
 		),
 		vscode.window.registerWebviewViewProvider(
 			'rene-yt-music-view',
-			new YouTubeMusicViewProvider(context.extensionUri)
+			new YouTubeMusicViewProvider(context.extensionUri),
+			{ webviewOptions: { retainContextWhenHidden: true } }
 		)
 	);
 
