@@ -15,6 +15,8 @@ interface TrackResult {
     preview?: string;
 }
 
+type SearchButtonMode = 'disabled' | 'search' | 'forward';
+
 export interface AtmMusicController {
     search(query: string): void;
     goForwardFromSearch(): void;
@@ -29,6 +31,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
     private lastSearchQuery = '';
     private hasCachedSearch = false;
     private canForwardFromSearch = false;
+    private searchButtonMode: SearchButtonMode = 'disabled';
     private currentIndex = -1;
     private isPlaying = false;
     private isMuted = false;
@@ -72,6 +75,8 @@ class AtmMusicControllerImpl implements AtmMusicController {
             searchInput.value = cleanQuery;
         }
 
+        this.updateSearchForwardButtonState();
+
         this.showScreen('results');
         const resultsQueryInput = this.$('#results-query-input') as HTMLInputElement | null;
         if (resultsQueryInput) {
@@ -104,14 +109,27 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
     private bindSearchForwardButton() {
         const searchBtn = this.$('#search-btn') as HTMLButtonElement | null;
+        const searchInput = this.$('#search-input') as HTMLInputElement | null;
         if (!searchBtn) {
             return;
         }
 
-        searchBtn.setAttribute('aria-label', 'Go forward to previous search');
         searchBtn.addEventListener('click', () => {
-            this.goForwardFromSearch();
+            if (this.searchButtonMode === 'forward') {
+                this.goForwardFromSearch();
+                return;
+            }
+
+            if (this.searchButtonMode === 'search') {
+                this.search(searchInput?.value || '');
+            }
         });
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                this.updateSearchForwardButtonState();
+            });
+        }
     }
 
     private setForwardFromSearch(enabled: boolean) {
@@ -121,13 +139,31 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
     private updateSearchForwardButtonState() {
         const searchBtn = this.$('#search-btn') as HTMLButtonElement | null;
+        const searchInput = this.$('#search-input') as HTMLInputElement | null;
         if (!searchBtn) {
             return;
         }
 
-        const isDisabled = !this.canForwardFromSearch;
+        const inputValue = (searchInput?.value || '').trim();
+        const isForward = this.canForwardFromSearch && inputValue.length > 0 && inputValue === this.lastSearchQuery;
+        const mode: SearchButtonMode = inputValue.length === 0 ? 'disabled' : (isForward ? 'forward' : 'search');
+        this.searchButtonMode = mode;
+
+        const isDisabled = mode === 'disabled';
         searchBtn.disabled = isDisabled;
         searchBtn.classList.toggle('is-disabled', isDisabled);
+
+        if (mode === 'forward') {
+            searchBtn.setAttribute('aria-label', 'Go forward to previous search');
+            return;
+        }
+
+        if (mode === 'search') {
+            searchBtn.setAttribute('aria-label', 'Search');
+            return;
+        }
+
+        searchBtn.setAttribute('aria-label', 'Search unavailable');
     }
 
     private mountScreens() {
@@ -214,6 +250,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
                 case 'searchResults':
                     this.hasCachedSearch = true;
                     this.renderResults(msg.results || []);
+                    this.updateSearchForwardButtonState();
                     break;
                 case 'error':
                     this.handleError(msg.message || 'Unknown error');
