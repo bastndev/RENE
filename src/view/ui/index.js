@@ -148,197 +148,89 @@
             deezerAudio = null;
         }
 
-        // Crear reproductor de audio para preview
-        const container = $('#player-container');
-        if (container) {
-            const hasControls = !!$('#play-pause-btn') && !!$('#progress-bar') && !!$('#volume-btn');
+        const cur = $('#current-time');
+        const bar = $('#progress-bar');
+        const total = $('#total-time');
+        if (cur) { cur.textContent = '0:00'; }
+        if (bar) { bar.value = '0'; }
+        if (total) { total.textContent = '0:30'; }
 
-            if (!hasControls) {
-                const hasPrev = currentIndex > 0;
-                const hasNext = currentIndex < results.length - 1;
+        // Crear elemento de audio
+        deezerAudio = new Audio(track.preview);
+        deezerAudio.crossOrigin = 'anonymous';
+        
+        deezerAudio.onplay = () => {
+            setPlayButtonLoading(false);
+            isPlaying = true;
+            updatePlayPauseIcon();
+            startProgressLoop();
+        };
 
-                container.innerHTML = `
-                    <div class="player-content">
-                        <div class="player-progress">
-                            <span id="current-time">0:00</span>
-                            <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
-                            <span id="total-time">0:30</span>
-                        </div>
-                        <div class="player-controls">
-                            <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                    <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                                </svg>
-                            </button>
-                            <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                                </svg>
-                            </button>
-                            <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                    <path id="play-path" d="M8 5v14l11-7z"/>
-                                </svg>
-                            </button>
-                            <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                                </svg>
-                            </button>
-                            <button id="repeat-btn" class="control-btn control-btn-sm${isLoopEnabled ? ' active' : ''}" aria-label="Repeat">
-                                    ${getRepeatIconSvg(isLoopEnabled)}
-                            </button>
-                        </div>
-                    </div>`;
-            } else {
-                const cur = $('#current-time');
-                const bar = $('#progress-bar');
-                const total = $('#total-time');
-                if (cur) { cur.textContent = '0:00'; }
-                if (bar) { bar.value = '0'; }
-                if (total) { total.textContent = '0:30'; }
+        deezerAudio.onpause = () => {
+            isPlaying = false;
+            updatePlayPauseIcon();
+            stopProgressLoop();
+        };
+
+        deezerAudio.onended = () => {
+            isPlaying = false;
+            updatePlayPauseIcon();
+            stopProgressLoop();
+            if (isLoopEnabled) {
+                deezerAudio.currentTime = 0;
+                deezerAudio.play();
+                return;
             }
-
-            // Crear elemento de audio
-            deezerAudio = new Audio(track.preview);
-            deezerAudio.crossOrigin = 'anonymous';
-            
-            deezerAudio.onplay = () => {
-                setPlayButtonLoading(false);
-                isPlaying = true;
-                updatePlayPauseIcon();
-                startProgressLoop();
-            };
-
-            deezerAudio.onpause = () => {
-                isPlaying = false;
-                updatePlayPauseIcon();
-                stopProgressLoop();
-            };
-
-            deezerAudio.onended = () => {
-                isPlaying = false;
-                updatePlayPauseIcon();
-                stopProgressLoop();
-                if (isLoopEnabled) {
-                    deezerAudio.currentTime = 0;
-                    deezerAudio.play();
-                    return;
-                }
-                if (currentIndex < results.length - 1) {
-                    selectTrack(currentIndex + 1);
-                }
-            };
-
-            deezerAudio.ontimeupdate = () => {
-                const bar = $('#progress-bar');
-                const cur = $('#current-time');
-                if (bar && deezerAudio.duration) {
-                    bar.value = (deezerAudio.currentTime / deezerAudio.duration) * 1000;
-                }
-                if (cur) {
-                    cur.textContent = formatDuration(Math.floor(deezerAudio.currentTime));
-                }
-            };
-
-            // Setup eventos del reproductor
-            const playPauseBtn = $('#play-pause-btn');
-            const prevBtn = $('#prev-btn');
-            const nextBtn = $('#next-btn');
-            const progressBar = $('#progress-bar');
-            const volumeBtn = $('#volume-btn');
-            const repeatBtn = $('#repeat-btn');
-
-            if (playPauseBtn) {
-                playPauseBtn.onclick = () => {
-                    if (isPlaying) {
-                        deezerAudio.pause();
-                    } else {
-                        deezerAudio.play();
-                    }
-                };
+            if (currentIndex < results.length - 1) {
+                selectTrack(currentIndex + 1);
             }
+        };
 
-            if (prevBtn && !prevBtn.classList.contains('disabled')) {
-                prevBtn.onclick = () => {
-                    if (currentIndex > 0) { selectTrack(currentIndex - 1); }
-                };
-            }
-
-            if (nextBtn && !nextBtn.classList.contains('disabled')) {
-                nextBtn.onclick = () => {
-                    if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
-                };
-            }
-
-            if (progressBar) {
-                progressBar.oninput = (e) => {
-                    if (deezerAudio && deezerAudio.duration) {
-                        const seekTo = (e.target.value / 1000) * deezerAudio.duration;
-                        deezerAudio.currentTime = seekTo;
-                    }
-                };
-            }
-
-            if (volumeBtn) {
-                volumeBtn.onclick = () => {
-                    isMuted = !isMuted;
-                    deezerAudio.muted = isMuted;
-                    updateVolumeIcon();
-                };
-            }
-
-            if (repeatBtn) {
-                repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
-                repeatBtn.onclick = () => {
-                    isLoopEnabled = !isLoopEnabled;
-                    repeatBtn.classList.toggle('active', isLoopEnabled);
-                    repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
-                    repeatBtn.innerHTML = getRepeatIconSvg(isLoopEnabled);
-                };
-            }
-
-            // Reproducir automáticamente
-            deezerAudio.play();
-        }
+        deezerAudio.muted = isMuted;
+        deezerAudio.play();
     }
 
     // --- Progress Loop ---
+    let progressDom = null;
+
     function startProgressLoop() {
         stopProgressLoop();
-        progressTimer = setInterval(() => {
-            if (deezerAudio && deezerAudio.duration) {
-                // Deezer preview
+        
+        progressDom = {
+            bar: $('#progress-bar'),
+            cur: $('#current-time'),
+            tot: $('#total-time')
+        };
+
+        const update = () => {
+            if (activePlayerSource === 'deezer' && deezerAudio && deezerAudio.duration) {
                 updateProgressBar(deezerAudio.currentTime, deezerAudio.duration);
-            } else if (ytPlayer && ytPlayer.getCurrentTime) {
-                // YouTube
-                const currentTime = ytPlayer.getCurrentTime();
-                const duration = ytPlayer.getDuration();
-                updateProgressBar(currentTime, duration);
+            } else if (activePlayerSource === 'youtube' && ytPlayer && ytPlayer.getCurrentTime) {
+                updateProgressBar(ytPlayer.getCurrentTime(), ytPlayer.getDuration());
             }
-        }, 1000);
+            progressTimer = requestAnimationFrame(update);
+        };
+        progressTimer = requestAnimationFrame(update);
     }
 
     function stopProgressLoop() {
         if (progressTimer) {
-            clearInterval(progressTimer);
+            cancelAnimationFrame(progressTimer);
             progressTimer = null;
         }
     }
 
     function updateProgressBar(current, total) {
-        const bar = $('#progress-bar');
-        const cur = $('#current-time');
-        const tot = $('#total-time');
-        
-        if (bar && total > 0) {
-            bar.value = (current / total) * 1000;
+        if (!progressDom) return;
+
+        if (progressDom.bar && total > 0) {
+            progressDom.bar.value = (current / total) * 1000;
         }
-        if (cur) {
-            cur.textContent = formatDuration(Math.floor(current));
+        if (progressDom.cur) {
+            progressDom.cur.textContent = formatDuration(Math.floor(current));
         }
-        if (tot && total > 0) {
-            tot.textContent = formatDuration(Math.floor(total));
+        if (progressDom.tot && total > 0) {
+            progressDom.tot.textContent = formatDuration(Math.floor(total));
         }
     }
 
@@ -601,7 +493,15 @@
         }
     }
 
+    let eventController = null;
+
     function setupPlayerEvents() {
+        if (eventController) {
+            eventController.abort();
+        }
+        eventController = new AbortController();
+        const { signal } = eventController;
+
         const playPauseBtn = $('#play-pause-btn');
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
@@ -612,62 +512,61 @@
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
                 if (isPlayButtonLoading) return;
-                if (activePlayerSource !== 'youtube') return;
-                if (!ytPlayer || !playerReady) return;
                 
-                if (isPlaying) {
-                    ytPlayer.pauseVideo();
-                } else {
-                    ytPlayer.playVideo();
+                if (activePlayerSource === 'youtube') {
+                    if (!ytPlayer || !playerReady) return;
+                    if (isPlaying) ytPlayer.pauseVideo();
+                    else ytPlayer.playVideo();
+                } else if (activePlayerSource === 'deezer' && deezerAudio) {
+                    if (isPlaying) deezerAudio.pause();
+                    else deezerAudio.play();
                 }
-            });
+            }, { signal });
         }
 
         if (prevBtn && !prevBtn.classList.contains('disabled')) {
             prevBtn.addEventListener('click', () => {
                 if (currentIndex > 0) { selectTrack(currentIndex - 1); }
-            });
+            }, { signal });
         }
 
         if (nextBtn && !nextBtn.classList.contains('disabled')) {
             nextBtn.addEventListener('click', () => {
                 if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
-            });
+            }, { signal });
         }
 
         if (progressBar) {
             progressBar.addEventListener('input', (e) => {
-                if (activePlayerSource !== 'youtube') return;
-                if (ytPlayer && ytPlayer.seekTo) {
-                    const duration = ytPlayer.getDuration();
-                    const seekTo = (e.target.value / 1000) * duration;
-                    ytPlayer.seekTo(seekTo, true);
+                const val = e.target.value / 1000;
+                if (activePlayerSource === 'youtube' && ytPlayer && ytPlayer.seekTo) {
+                    ytPlayer.seekTo(val * ytPlayer.getDuration(), true);
+                } else if (activePlayerSource === 'deezer' && deezerAudio) {
+                    deezerAudio.currentTime = val * deezerAudio.duration;
                 }
-            });
+            }, { signal });
         }
 
         if (volumeBtn) {
             volumeBtn.addEventListener('click', () => {
-                if (activePlayerSource !== 'youtube') return;
-                if (!ytPlayer) return;
                 isMuted = !isMuted;
-                if (isMuted) {
-                    ytPlayer.mute();
-                } else {
-                    ytPlayer.unMute();
+                if (activePlayerSource === 'youtube' && ytPlayer) {
+                    if (isMuted) ytPlayer.mute();
+                    else ytPlayer.unMute();
+                } else if (activePlayerSource === 'deezer' && deezerAudio) {
+                    deezerAudio.muted = isMuted;
                 }
                 updateVolumeIcon();
-            });
+            }, { signal });
         }
 
         if (repeatBtn) {
             repeatBtn.addEventListener('click', () => {
-                if (activePlayerSource !== 'youtube') return;
                 isLoopEnabled = !isLoopEnabled;
                 repeatBtn.classList.toggle('active', isLoopEnabled);
                 repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
                 repeatBtn.innerHTML = getRepeatIconSvg(isLoopEnabled);
-            });
+            }, { signal });
             repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
         }
     }

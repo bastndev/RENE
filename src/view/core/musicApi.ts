@@ -20,17 +20,17 @@ export interface SearchResult {
 }
 
 const ytmusic = new YTMusic();
-let isInitialized = false;
+let initPromise: Promise<any> | null = null;
 
-async function initYTMusic() {
-	if (!isInitialized) {
-		try {
-			await ytmusic.initialize();
-			isInitialized = true;
-		} catch (error) {
+async function initYTMusic(): Promise<void> {
+	if (!initPromise) {
+		initPromise = ytmusic.initialize().catch((error) => {
 			console.warn("[RENE Music] YouTube Music initialization failed:", error);
-			// No es fatal, usaremos Deezer como fallback
-		}
+			initPromise = null; // Allow retry on next search
+		});
+	}
+	if (initPromise) {
+		await initPromise;
 	}
 }
 
@@ -126,30 +126,32 @@ async function searchLastFM(query: string): Promise<SearchResult[]> {
 // Búsqueda combinada con fallback automático
 export async function searchMusic(query: string): Promise<SearchResult[]> {
 	console.log(`[RENE Music] Searching for: "${query}"`);
-	
+
+	// 1. YouTube + Deezer en paralelo (más rápido)
+	const [youtubeResult, deezerResult] = await Promise.allSettled([
+		searchYouTubeMusic(query),
+		searchDeezer(query),
+	]);
+
 	const allResults: SearchResult[] = [];
 
-	// 1. Intentar YouTube Music primero (mejor calidad)
-	console.log("[RENE] Intentando YouTube Music...");
-	const youtubeResults = await searchYouTubeMusic(query);
-	allResults.push(...youtubeResults);
+	if (youtubeResult.status === 'fulfilled') {
+		allResults.push(...youtubeResult.value);
+	}
+	if (deezerResult.status === 'fulfilled') {
+		allResults.push(...deezerResult.value);
+	}
 
-	// 2. WICHTIG: Deezer como respaldo (sin restricciones de región)
-	console.log("[RENE] Buscando en Deezer...");
-	const deezerResults = await searchDeezer(query);
-	allResults.push(...deezerResults);
-
-	// 3. Last.FM para información adicional si es necesario
+	// 2. Last.FM solo si hay pocos resultados
 	if (allResults.length < 10) {
-		console.log("[RENE] Complementando con Last.FM...");
+		console.log("[RENE Music] Complementando con Last.FM...");
 		const lastfmResults = await searchLastFM(query);
 		allResults.push(...lastfmResults);
 	}
 
-	// Devolver resultados: priorizar los que tienen preview/pueden reproducirse
+	// Priorizar resultados que se pueden reproducir
 	return allResults
 		.sort((a, b) => {
-			// Priorizar resultados que se pueden reproducir
 			const aPlayable = a.canPlay ? 1 : 0;
 			const bPlayable = b.canPlay ? 1 : 0;
 			return bPlayable - aPlayable;
