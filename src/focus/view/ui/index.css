@@ -151,6 +151,22 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
     transform: scale(0.93);
 }
 
+.search-btn.is-disabled,
+.search-btn:disabled {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+    opacity: 0.75;
+}
+
+.search-btn.is-disabled:hover,
+.search-btn:disabled:hover,
+.search-btn.is-disabled:active,
+.search-btn:disabled:active {
+    transform: none;
+    background: var(--vscode-button-secondaryBackground);
+}
+
 .quick-access {
     display: flex;
     gap: 6px;

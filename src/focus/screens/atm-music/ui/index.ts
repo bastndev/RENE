@@ -17,6 +17,7 @@ interface TrackResult {
 
 export interface AtmMusicController {
     search(query: string): void;
+    goForwardFromSearch(): void;
 }
 
 export function createAtmMusicController(vscode: VSCodeApi): AtmMusicController {
@@ -25,6 +26,9 @@ export function createAtmMusicController(vscode: VSCodeApi): AtmMusicController 
 
 class AtmMusicControllerImpl implements AtmMusicController {
     private results: TrackResult[] = [];
+    private lastSearchQuery = '';
+    private hasCachedSearch = false;
+    private canForwardFromSearch = false;
     private currentIndex = -1;
     private isPlaying = false;
     private isMuted = false;
@@ -45,6 +49,8 @@ class AtmMusicControllerImpl implements AtmMusicController {
     constructor(vscode: VSCodeApi) {
         this.vscode = vscode;
         this.mountScreens();
+        this.bindSearchForwardButton();
+        this.updateSearchForwardButtonState();
         this.initializeYouTubePlayer();
         this.bindWebviewMessages();
         this.bindResultsHeaderEvents();
@@ -57,6 +63,15 @@ class AtmMusicControllerImpl implements AtmMusicController {
             return;
         }
 
+        this.lastSearchQuery = cleanQuery;
+        this.hasCachedSearch = false;
+        this.setForwardFromSearch(false);
+
+        const searchInput = this.$('#search-input') as HTMLInputElement | null;
+        if (searchInput) {
+            searchInput.value = cleanQuery;
+        }
+
         this.showScreen('results');
         const resultsQueryInput = this.$('#results-query-input') as HTMLInputElement | null;
         if (resultsQueryInput) {
@@ -65,6 +80,54 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
         this.showResultsSkeleton();
         this.vscode.postMessage({ type: 'search', query: cleanQuery });
+    }
+
+    public goForwardFromSearch() {
+        if (!this.canForwardFromSearch || !this.lastSearchQuery) {
+            return;
+        }
+
+        const searchInput = this.$('#search-input') as HTMLInputElement | null;
+        if (searchInput) {
+            searchInput.value = this.lastSearchQuery;
+        }
+
+        const resultsQueryInput = this.$('#results-query-input') as HTMLInputElement | null;
+        if (resultsQueryInput) {
+            resultsQueryInput.value = this.lastSearchQuery;
+        }
+
+        this.renderResults(this.results);
+        this.showScreen('results');
+        this.setForwardFromSearch(false);
+    }
+
+    private bindSearchForwardButton() {
+        const searchBtn = this.$('#search-btn') as HTMLButtonElement | null;
+        if (!searchBtn) {
+            return;
+        }
+
+        searchBtn.setAttribute('aria-label', 'Go forward to previous search');
+        searchBtn.addEventListener('click', () => {
+            this.goForwardFromSearch();
+        });
+    }
+
+    private setForwardFromSearch(enabled: boolean) {
+        this.canForwardFromSearch = enabled;
+        this.updateSearchForwardButtonState();
+    }
+
+    private updateSearchForwardButtonState() {
+        const searchBtn = this.$('#search-btn') as HTMLButtonElement | null;
+        if (!searchBtn) {
+            return;
+        }
+
+        const isDisabled = !this.canForwardFromSearch;
+        searchBtn.disabled = isDisabled;
+        searchBtn.classList.toggle('is-disabled', isDisabled);
     }
 
     private mountScreens() {
@@ -149,6 +212,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
             const msg = event.data as { type?: string; results?: TrackResult[]; message?: string };
             switch (msg.type) {
                 case 'searchResults':
+                    this.hasCachedSearch = true;
                     this.renderResults(msg.results || []);
                     break;
                 case 'error':
@@ -192,6 +256,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
                 this.isPlaying = false;
                 this.activePlayerSource = 'none';
                 this.showScreen('search');
+                this.setForwardFromSearch(this.hasCachedSearch && !!this.lastSearchQuery);
             });
         }
 

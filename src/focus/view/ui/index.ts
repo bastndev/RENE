@@ -7,19 +7,12 @@ import { createAtmMusicController } from '../../screens/atm-music/ui/index';
     const musicController = createAtmMusicController(vscode);
 
     const searchInput = document.querySelector('#search-input') as HTMLInputElement | null;
-    const searchBtn = document.querySelector('#search-btn') as HTMLButtonElement | null;
 
     if (searchInput) {
         searchInput.addEventListener('keypress', (e: KeyboardEvent) => {
             if (e.key === 'Enter') {
                 musicController.search(searchInput.value);
             }
-        });
-    }
-
-    if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            musicController.search(searchInput?.value || '');
         });
     }
 }());
