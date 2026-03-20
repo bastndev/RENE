@@ -32,7 +32,7 @@ export class YouTubeMusicViewProvider implements vscode.WebviewViewProvider {
             vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview.js'),
         );
         const styleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this._extensionUri, 'src', 'view', 'ui', 'index.css'),
+            vscode.Uri.joinPath(this._extensionUri, 'src', 'focus', 'view', 'ui', 'index.css'),
         );
         const skeletonUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this._extensionUri, 'src', 'focus', 'components', 'skeletons', 'view.css'),
@@ -51,7 +51,7 @@ export class YouTubeMusicViewProvider implements vscode.WebviewViewProvider {
             `font-src ${webview.cspSource}`,
         ].join('; ');
 
-        const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'view', 'ui', 'index.html');
+        const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'focus', 'view', 'ui', 'index.html');
         let html = fs.readFileSync(htmlPath, 'utf8');
 
         html = html.replace(
