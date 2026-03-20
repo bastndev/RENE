@@ -1,0 +1,35 @@
+.play-btn.loading {
+	position: relative;
+	pointer-events: none;
+}
+
+.play-btn.loading::after {
+	content: '';
+	position: absolute;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0.10) 25%,
+		rgba(255, 255, 255, 0.32) 50%,
+		rgba(255, 255, 255, 0.10) 75%
+	);
+	background-size: 200% 100%;
+	animation: play-btn-skeleton-shimmer 1s linear infinite;
+}
+
+body.vscode-light .play-btn.loading::after {
+	background: linear-gradient(
+		90deg,
+		rgba(0, 0, 0, 0.10) 25%,
+		rgba(0, 0, 0, 0.24) 50%,
+		rgba(0, 0, 0, 0.10) 75%
+	);
+	background-size: 200% 100%;
+}
+
+@keyframes play-btn-skeleton-shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}

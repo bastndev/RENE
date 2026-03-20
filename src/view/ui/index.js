@@ -9,6 +9,10 @@
     let ytPlayer = null;
     let playerReady = false;
     let progressTimer = null;
+    let playbackIndex = -1;
+    let selectedTrackIndex = -1;
+    let fallbackTried = new Set();
+    let isPlayButtonLoading = false;
 
     // --- DOM helpers ---
     const $ = (s) => document.querySelector(s);
@@ -49,14 +53,19 @@
         // YT.PlayerState.BUFFERING = 3
         
         if (event.data === YT.PlayerState.PLAYING) {
+            setPlayButtonLoading(false);
             isPlaying = true;
             updatePlayPauseIcon();
             startProgressLoop();
+        } else if (event.data === YT.PlayerState.BUFFERING) {
+            setPlayButtonLoading(true);
         } else if (event.data === YT.PlayerState.PAUSED) {
+            setPlayButtonLoading(false);
             isPlaying = false;
             updatePlayPauseIcon();
             stopProgressLoop();
         } else if (event.data === YT.PlayerState.ENDED) {
+            setPlayButtonLoading(false);
             isPlaying = false;
             updatePlayPauseIcon();
             stopProgressLoop();
@@ -83,7 +92,7 @@
     }
 
     function handlePlaybackError() {
-        const currentTrack = results[currentIndex];
+        const currentTrack = results[playbackIndex];
         
         // Opción 1: Si el track tiene preview de Deezer, reproducirlo
         if (currentTrack && currentTrack.preview) {
@@ -92,37 +101,13 @@
             return;
         }
 
-        // Opción 2: Si no, intentar con el siguiente track (buscar el primero que tenga preview)
-        if (results.length > 1) {
-            console.log("[RENE] Fallback: Intentando siguiente resultado...");
-            let nextPlayable = -1;
-            
-            // Buscar desde el siguiente hasta el final
-            for (let i = currentIndex + 1; i < results.length; i++) {
-                if (results[i].preview || results[i].videoId) {
-                    nextPlayable = i;
-                    break;
-                }
-            }
-
-            // Si no encontró después, buscar desde el principio
-            if (nextPlayable === -1) {
-                for (let i = 0; i < currentIndex; i++) {
-                    if (results[i].preview || results[i].videoId) {
-                        nextPlayable = i;
-                        break;
-                    }
-                }
-            }
-
-            if (nextPlayable !== -1) {
-                selectTrack(nextPlayable);
-                return;
-            }
+        // Opción 2: buscar fallback en segundo plano sin cambiar UI visible
+        if (attemptBackgroundFallback()) {
+            return;
         }
 
         // Opción 3: Si nada funciona, mostrar error
-        const track = results[currentIndex];
+        const track = results[selectedTrackIndex];
         const alternativeMsg = track 
             ? `<div class="error-msg">
                 <strong>${escapeHtml(track.title)}</strong> no se puede reproducir en YouTube. <br>
@@ -142,6 +127,8 @@
             showPlayerError('No preview available for this track');
             return;
         }
+
+        setPlayButtonLoading(true);
 
         // Limpiar reproductor anterior
         if (deezerAudio) {
@@ -191,6 +178,7 @@
             deezerAudio.crossOrigin = 'anonymous';
             
             deezerAudio.onplay = () => {
+                setPlayButtonLoading(false);
                 isPlaying = true;
                 updatePlayPauseIcon();
                 startProgressLoop();
@@ -393,6 +381,9 @@
     // --- Select track: show player + load in hidden YT player ---
     function selectTrack(index) {
         currentIndex = index;
+        selectedTrackIndex = index;
+        playbackIndex = index;
+        fallbackTried = new Set();
         const track = results[index];
         if (!track) { return; }
 
@@ -414,22 +405,10 @@
             `;
         }
 
-        // Load the video in the hidden player
-        if (track.videoId && ytPlayer && ytPlayer.loadVideoById) {
-            renderPlayerUI(track);
-            ytPlayer.loadVideoById(track.videoId);
-            ytPlayer.playVideo();
-        } else if (track.preview) {
-            // Si no tiene videoId pero tiene preview de Deezer, reproducir preview
-            playDeezerPreview(track);
-        } else {
-            // Si no tiene preview, buscar siguiente resultado que sí tenga
-            const nextPlayable = results.findIndex((t, idx) => idx > index && (t.videoId || t.preview));
-            if (nextPlayable !== -1) {
-                selectTrack(nextPlayable);
-            } else {
-                showPlayerError('No playable track available in this list');
-            }
+        renderPlayerUI(track);
+        setPlayButtonLoading(true);
+        if (!attemptPlaybackAtIndex(index)) {
+            showPlayerError('No playable track available in this list');
         }
     }
 
@@ -478,11 +457,67 @@
         setupPlayerEvents();
     }
 
+    function setPlayButtonLoading(loading) {
+        isPlayButtonLoading = loading;
+        const btn = $('#play-pause-btn');
+        const icon = $('#play-path');
+        if (!btn) { return; }
+
+        btn.classList.toggle('loading', loading);
+        btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+        btn.disabled = loading;
+
+        if (icon) {
+            icon.style.opacity = loading ? '0' : '1';
+        }
+    }
+
+    function attemptPlaybackAtIndex(index) {
+        const track = results[index];
+        if (!track) { return false; }
+
+        playbackIndex = index;
+        fallbackTried.add(index);
+
+        if (track.videoId && ytPlayer && ytPlayer.loadVideoById) {
+            setPlayButtonLoading(true);
+            ytPlayer.loadVideoById(track.videoId);
+            ytPlayer.playVideo();
+            return true;
+        }
+
+        if (track.preview) {
+            playDeezerPreview(track);
+            return true;
+        }
+
+        return attemptBackgroundFallback();
+    }
+
+    function attemptBackgroundFallback() {
+        if (results.length <= 1) { return false; }
+
+        for (let i = selectedTrackIndex + 1; i < results.length; i++) {
+            if (!fallbackTried.has(i) && (results[i].preview || results[i].videoId)) {
+                return attemptPlaybackAtIndex(i);
+            }
+        }
+
+        for (let i = 0; i < selectedTrackIndex; i++) {
+            if (!fallbackTried.has(i) && (results[i].preview || results[i].videoId)) {
+                return attemptPlaybackAtIndex(i);
+            }
+        }
+
+        return false;
+    }
+
     function showPlayerError(text) {
         const container = $('#player-container');
         if (container) {
             container.innerHTML = `<div class="error-msg">${escapeHtml(text)}</div>`;
         }
+        setPlayButtonLoading(false);
         isPlaying = false;
     }
 
@@ -518,6 +553,7 @@
 
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
+                if (isPlayButtonLoading) return;
                 if (!ytPlayer || !playerReady) return;
                 
                 if (isPlaying) {
