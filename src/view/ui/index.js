@@ -355,8 +355,9 @@
         query = (query || '').trim();
         if (!query) { return; }
         showScreen('results');
-        const queryLabel = $('#results-query');
-        if (queryLabel) { queryLabel.textContent = `"${query}"`; }
+        const resultsQueryInput = $('#results-query-input');
+        if (resultsQueryInput) { resultsQueryInput.value = query; }
+        if (searchInput) { searchInput.value = query; }
         showResultsSkeleton();
         vscode.postMessage({ type: 'search', query });
     }
@@ -377,7 +378,7 @@
             el.className = 'result-item';
             el.innerHTML = `
                 <img class="result-thumbnail" src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy"
-                     onerror="this.style.background='rgba(128,128,128,0.15)';this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
+                    onerror="this.style.background='rgba(128,128,128,0.15)';this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
                 <div class="result-info">
                     <div class="result-title">${escapeHtml(item.title)}</div>
                     <div class="result-meta">
@@ -602,6 +603,8 @@
     // --- Init events ---
     const searchInput = $('#search-input');
     const searchBtn = $('#search-btn');
+    const resultsQueryInput = $('#results-query-input');
+    const resultsQueryBtn = $('#results-query-btn');
 
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
@@ -612,6 +615,18 @@
     if (searchBtn) {
         searchBtn.addEventListener('click', () => {
             if (searchInput) { doSearch(searchInput.value); }
+        });
+    }
+
+    if (resultsQueryInput) {
+        resultsQueryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { doSearch(resultsQueryInput.value); }
+        });
+    }
+
+    if (resultsQueryBtn) {
+        resultsQueryBtn.addEventListener('click', () => {
+            if (resultsQueryInput) { doSearch(resultsQueryInput.value); }
         });
     }
 
