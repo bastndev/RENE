@@ -90,6 +90,22 @@
     transform: scale(0.94);
 }
 
+.results-query-btn.is-disabled,
+.results-query-btn:disabled {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+    opacity: 0.75;
+}
+
+.results-query-btn.is-disabled:hover,
+.results-query-btn:disabled:hover,
+.results-query-btn.is-disabled:active,
+.results-query-btn:disabled:active {
+    transform: none;
+    background: var(--vscode-button-secondaryBackground);
+}
+
 .player-track-info {
     font-size: 11px;
     overflow: hidden;

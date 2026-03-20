@@ -32,6 +32,8 @@ class AtmMusicControllerImpl implements AtmMusicController {
     private hasCachedSearch = false;
     private canForwardFromSearch = false;
     private searchButtonMode: SearchButtonMode = 'disabled';
+    private canForwardFromResults = false;
+    private resultsQueryButtonMode: SearchButtonMode = 'disabled';
     private currentIndex = -1;
     private isPlaying = false;
     private isMuted = false;
@@ -69,6 +71,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
         this.lastSearchQuery = cleanQuery;
         this.hasCachedSearch = false;
         this.setForwardFromSearch(false);
+        this.setForwardFromResults(false);
 
         const searchInput = this.$('#search-input') as HTMLInputElement | null;
         if (searchInput) {
@@ -82,6 +85,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
         if (resultsQueryInput) {
             resultsQueryInput.value = cleanQuery;
         }
+        this.updateResultsQueryButtonState();
 
         this.showResultsSkeleton();
         this.vscode.postMessage({ type: 'search', query: cleanQuery });
@@ -268,16 +272,34 @@ class AtmMusicControllerImpl implements AtmMusicController {
         if (resultsQueryInput) {
             resultsQueryInput.addEventListener('keypress', (e: KeyboardEvent) => {
                 if (e.key === 'Enter') {
+                    if (this.resultsQueryButtonMode === 'forward') {
+                        this.goForwardFromResults();
+                        return;
+                    }
+
                     this.search(resultsQueryInput.value);
                 }
+            });
+
+            resultsQueryInput.addEventListener('input', () => {
+                this.updateResultsQueryButtonState();
             });
         }
 
         if (resultsQueryBtn) {
             resultsQueryBtn.addEventListener('click', () => {
-                this.search(resultsQueryInput?.value || '');
+                if (this.resultsQueryButtonMode === 'forward') {
+                    this.goForwardFromResults();
+                    return;
+                }
+
+                if (this.resultsQueryButtonMode === 'search') {
+                    this.search(resultsQueryInput?.value || '');
+                }
             });
         }
+
+        this.updateResultsQueryButtonState();
     }
 
     private bindBackButtons() {
@@ -300,9 +322,56 @@ class AtmMusicControllerImpl implements AtmMusicController {
         const backToResults = this.$('#back-to-results') as HTMLButtonElement | null;
         if (backToResults) {
             backToResults.addEventListener('click', () => {
+                this.setForwardFromResults(this.selectedTrackIndex >= 0);
                 this.showScreen('results');
             });
         }
+    }
+
+    private setForwardFromResults(enabled: boolean) {
+        this.canForwardFromResults = enabled;
+        this.updateResultsQueryButtonState();
+    }
+
+    private goForwardFromResults() {
+        if (!this.canForwardFromResults || this.selectedTrackIndex < 0) {
+            return;
+        }
+
+        this.showScreen('player');
+        this.setForwardFromResults(false);
+    }
+
+    private updateResultsQueryButtonState() {
+        const resultsQueryBtn = this.$('#results-query-btn') as HTMLButtonElement | null;
+        const resultsQueryInput = this.$('#results-query-input') as HTMLInputElement | null;
+        if (!resultsQueryBtn) {
+            return;
+        }
+
+        const inputValue = (resultsQueryInput?.value || '').trim();
+        const isUnchanged = inputValue.length > 0 && inputValue === this.lastSearchQuery;
+        const isForward = this.canForwardFromResults && isUnchanged;
+        const mode: SearchButtonMode = inputValue.length === 0
+            ? 'disabled'
+            : (isForward ? 'forward' : (isUnchanged ? 'disabled' : 'search'));
+        this.resultsQueryButtonMode = mode;
+
+        const isDisabled = mode === 'disabled';
+        resultsQueryBtn.disabled = isDisabled;
+        resultsQueryBtn.classList.toggle('is-disabled', isDisabled);
+
+        if (mode === 'forward') {
+            resultsQueryBtn.setAttribute('aria-label', 'Go forward to player');
+            return;
+        }
+
+        if (mode === 'search') {
+            resultsQueryBtn.setAttribute('aria-label', 'Search again');
+            return;
+        }
+
+        resultsQueryBtn.setAttribute('aria-label', 'Search unavailable');
     }
 
     private showResultsSkeleton() {
