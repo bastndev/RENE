@@ -447,8 +447,9 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
         const trackInfo = this.$('#player-track-info');
         if (trackInfo) {
+            const truncatedTitle = this.truncateWithDots(track.title, 38);
             trackInfo.innerHTML = `
-                <span class="header-track-title">${this.escapeHtml(track.title)}</span>
+                <span class="header-track-title">${this.escapeHtml(truncatedTitle)}</span>
                 <span class="header-track-separator"> - </span>
                 <span class="header-track-artist">${this.escapeHtml(track.artist)}</span>
             `;
@@ -901,6 +902,15 @@ class AtmMusicControllerImpl implements AtmMusicController {
         const d = document.createElement('div');
         d.textContent = text || '';
         return d.innerHTML;
+    }
+
+    private truncateWithDots(text: string, maxLength: number): string {
+        const value = (text || '').trim();
+        if (value.length <= maxLength) {
+            return value;
+        }
+
+        return `${value.slice(0, maxLength - 3).trimEnd()}...`;
     }
 
     private $(selector: string): HTMLElement | null {
