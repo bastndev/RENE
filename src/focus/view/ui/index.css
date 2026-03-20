@@ -16,14 +16,21 @@ body {
 .screen {
     display: none;
     flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     height: 100vh;
-    padding: 10px 10px;
+    padding: 20px;
     overflow: hidden;
 }
 
 .screen.active {
     display: flex;
     animation: screenFadeIn 0.25s ease;
+}
+
+#screen-search {
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes screenFadeIn {
@@ -33,6 +40,7 @@ body {
 .search-container {
     position: relative;
     width: 100%;
+    max-width: 600px;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -146,8 +154,8 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
 .quick-access {
     display: flex;
     gap: 6px;
-    margin-top: 10px;
-    width: 100%;
+    margin-top: 16px;
+    max-width: 600px;
     justify-content: center;
     flex-wrap: wrap;
 }
