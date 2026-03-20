@@ -19,7 +19,7 @@ body {
     align-items: stretch;
     justify-content: flex-start;
     height: 100vh;
-    padding: 20px;
+    padding: 8px;
     overflow: hidden;
 }
 
@@ -31,6 +31,7 @@ body {
 #screen-search {
     align-items: center;
     justify-content: center;
+    padding: 20px;
 }
 
 @keyframes screenFadeIn {
