@@ -44,13 +44,13 @@
         {
           "type": "webview",
           "id": "rene-yt-music-view",
-          "name": "RENE MUSIC ♪",
+          "name": "ATMㅤㅤMUSIC ♪ ~ TIME ~ GAME ",
           "icon": "$(music)"
         }
       ]
     },
     "configuration": {
-      "title": "RENE Music",
+      "title": "ATM",
       "properties": {
         "rene.lastfmApiKey": {
           "type": "string",
