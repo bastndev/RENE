@@ -205,7 +205,27 @@ body {
 
 .search-input::-webkit-search-cancel-button {
     -webkit-appearance: none;
-    display: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0.9;
+    background:
+        linear-gradient(45deg, transparent 42%, rgba(255, 255, 255, 0.92) 42%, rgba(255, 255, 255, 0.92) 58%, transparent 58%),
+        linear-gradient(-45deg, transparent 42%, rgba(255, 255, 255, 0.92) 42%, rgba(255, 255, 255, 0.92) 58%, transparent 58%),
+        radial-gradient(circle at center, rgba(150, 150, 150, 0.45) 0 67%, transparent 68%);
+}
+
+.search-input::-webkit-search-cancel-button:hover {
+    opacity: 1;
+}
+
+body.vscode-light .search-input::-webkit-search-cancel-button {
+    background:
+        linear-gradient(45deg, transparent 42%, rgba(0, 0, 0, 0.9) 42%, rgba(0, 0, 0, 0.9) 58%, transparent 58%),
+        linear-gradient(-45deg, transparent 42%, rgba(0, 0, 0, 0.9) 42%, rgba(0, 0, 0, 0.9) 58%, transparent 58%),
+        radial-gradient(circle at center, rgba(120, 120, 120, 0.4) 0 67%, transparent 68%);
 }
 
 .search-btn {
