@@ -1,10 +1,3 @@
-/* ============================================
-   RENE YT Music — Full UI Styles
-   Optimized for VS Code sidebar (narrow width)
-   Uses VS Code theme colors exclusively
-   ============================================ */
-
-/* === Layout === */
 body {
     font-family: var(--vscode-font-family);
     background-color: transparent;
@@ -20,7 +13,6 @@ body {
     box-sizing: inherit;
 }
 
-/* === Screens === */
 .screen {
     display: none;
     flex-direction: column;
@@ -38,122 +30,6 @@ body {
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
-
-/* === Screen Header === */
-.screen-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-}
-
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground);
-    border: none;
-    border-radius: 50px;
-    padding: 5px 12px;
-    font-size: 11px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s ease;
-    flex-shrink: 0;
-}
-
-.back-btn svg {
-    fill: var(--vscode-button-secondaryForeground);
-}
-
-.back-btn:hover {
-    background: var(--vscode-button-secondaryHoverBackground);
-}
-
-.results-query {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-}
-
-.results-query-input {
-    width: 100%;
-    min-width: 0;
-    font-size: 11px;
-    font-family: var(--vscode-font-family);
-    color: var(--vscode-input-foreground);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 14px;
-    padding: 4px 8px;
-    outline: none;
-    opacity: 0.8;
-    transition: border-color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
-}
-
-.results-query-input:hover,
-.results-query-input:focus {
-    opacity: 1;
-    background: var(--vscode-input-background);
-    border-color: var(--vscode-focusBorder);
-}
-
-
-.results-query-input::placeholder {
-    color: var(--vscode-input-placeholderForeground);
-}
-
-.results-query-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 50%;
-    padding: 0;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--vscode-button-foreground);
-    background: var(--vscode-button-background);
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.15s ease;
-}
-
-.results-query-btn:hover {
-    background: var(--vscode-button-hoverBackground);
-}
-
-.results-query-btn:active {
-    transform: scale(0.94);
-}
-
-.player-track-info {
-    font-size: 11px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-}
-
-.header-track-title {
-    color: var(--vscode-editor-foreground);
-    font-weight: 600;
-}
-
-.header-track-separator {
-    color: var(--vscode-descriptionForeground);
-    margin: 0 2px;
-}
-
-.header-track-artist {
-    color: var(--vscode-descriptionForeground);
-}
-
-/* === Search Container === */
 .search-container {
     position: relative;
     width: 100%;
@@ -267,7 +143,6 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
     transform: scale(0.93);
 }
 
-/* === Quick Access === */
 .quick-access {
     display: flex;
     gap: 6px;
@@ -305,252 +180,19 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
     transform: translateY(0);
 }
 
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 0.85; transform: translateY(0); }
+.qa-btn.is-active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    opacity: 1;
 }
 
-/* === Results List === */
-.results-container {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 2px;
-}
-
-.results-container::-webkit-scrollbar {
-    width: 3px;
-}
-
-.results-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.results-container::-webkit-scrollbar-thumb {
-    background: var(--vscode-scrollbarSlider-background);
-    border-radius: 4px;
-}
-
-.results-container::-webkit-scrollbar-thumb:hover {
-    background: var(--vscode-scrollbarSlider-hoverBackground);
-}
-
-.result-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 4px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-
-.result-item:hover {
-    background: var(--vscode-list-hoverBackground);
-}
-
-.result-item:active {
-    background: var(--vscode-list-activeSelectionBackground);
-}
-
-.result-thumbnail {
-    width: 42px;
-    height: 42px;
-    border-radius: 6px;
-    object-fit: cover;
-    flex-shrink: 0;
-    background: rgba(128, 128, 128, 0.1);
-}
-
-.result-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.result-title {
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--vscode-foreground);
-}
-
-.result-meta {
-    font-size: 10px;
-    color: var(--vscode-descriptionForeground);
-    margin-top: 2px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.no-results {
-    text-align: center;
-    padding: 30px 12px;
-    font-size: 12px;
-    color: var(--vscode-descriptionForeground);
-}
-
-/* === Player === */
-.player-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 8px;
-    overflow: hidden;
-}
-
-.player-content {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 2px;
-    animation: playerFadeIn 0.25s ease;
-}
-
-@keyframes playerFadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-
-/* Progress bar */
-.player-progress {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    margin-top: 0;
-    padding: 0 2px;
-}
-
-.player-progress span {
-    font-size: 9px;
-    color: var(--vscode-descriptionForeground);
-    min-width: 28px;
-    font-variant-numeric: tabular-nums;
-}
-
-.player-progress span:last-child {
-    text-align: right;
-}
-
-.progress-bar {
-    -webkit-appearance: none;
-    appearance: none;
-    flex: 1;
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(128, 128, 128, 0.2);
-    outline: none;
-    cursor: pointer;
-}
-
-.progress-bar::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--vscode-foreground);
-    cursor: pointer;
-    margin-top: -3.5px;
-    transition: transform 0.1s ease;
-}
-
-.progress-bar::-webkit-slider-thumb:hover {
-    transform: scale(1.3);
-}
-
-/* === Player Controls === */
-.player-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 7px;
-    width: 100%;
-}
-
-.control-btn {
-    background: none;
-    border: none;
-    color: var(--vscode-foreground);
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.15s ease, transform 0.1s ease;
+.qa-btn[disabled] {
+    pointer-events: none;
+    cursor: default;
     opacity: 0.55;
 }
 
-.control-btn:hover {
-    opacity: 1;
-}
-
-.control-btn:active {
-    transform: scale(0.9);
-}
-
-.control-btn.disabled {
-    opacity: 0.2;
-    cursor: default;
-    pointer-events: none;
-}
-
-.control-btn svg {
-    fill: var(--vscode-foreground);
-}
-
-/* Play/Pause main button — circle outline like reference */
-.play-btn {
-    width: 39px;
-    height: 39px;
-    border: 2px solid var(--vscode-foreground);
-    border-radius: 50%;
-    opacity: 1;
-    margin: 0 4px;
-    background: transparent;
-    color: var(--vscode-foreground);
-}
-
-.play-btn:hover {
-    background: rgba(128, 128, 128, 0.1);
-    transform: scale(1.05);
-}
-
-.play-btn:active {
-    transform: scale(0.93);
-}
-
-/* Small side buttons (volume, repeat) */
-.control-btn-sm {
-    padding: 4px;
-    opacity: 0.4;
-}
-
-.control-btn-sm:hover {
-    opacity: 0.8;
-}
-
-.control-btn-sm svg {
-    width: 14px;
-    height: 14px;
-}
-
-
-/* Error message */
-.error-msg {
-    text-align: center;
-    padding: 24px 12px;
-    font-size: 12px;
-    color: var(--vscode-errorForeground, #f44);
-    line-height: 1.5;
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 0.85; transform: translateY(0); }
 }

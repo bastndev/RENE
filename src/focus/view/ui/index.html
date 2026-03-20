@@ -31,55 +31,13 @@
         </div>
 
         <div class="quick-access">
-            <button class="qa-btn" data-query="playlist mix">Playlist</button>
-            <button class="qa-btn" data-query="podcast">Podcast</button>
-            <button class="qa-btn" data-query="trending music 2026">Others</button>
+            <button class="qa-btn is-active" type="button" aria-current="true">Music</button>
+            <button class="qa-btn" type="button" disabled aria-disabled="true">Time</button>
+            <button class="qa-btn" type="button" disabled aria-disabled="true">Game</button>
         </div>
     </section>
 
-    <!-- Screen 2: Results -->
-    <section id="screen-results" class="screen">
-        <div class="screen-header">
-            <button id="back-to-search" class="back-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                </svg>
-                Search
-            </button>
-            <div class="results-query" role="search" aria-label="Edit search query">
-                <input
-                    type="search"
-                    id="results-query-input"
-                    class="results-query-input"
-                    placeholder="Edit search..."
-                    autocomplete="off"
-                    spellcheck="false"
-                    aria-label="Edit and search again"
-                />
-                <button id="results-query-btn" class="results-query-btn" aria-label="Search again">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        <div id="results-container" class="results-container"></div>
-    </section>
-
-    <!-- Screen 3: Player -->
-    <section id="screen-player" class="screen">
-        <div class="screen-header">
-            <button id="back-to-results" class="back-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                Back
-            </button>
-            <span id="player-track-info" class="player-track-info"></span>
-        </div>
-        <div id="player-container" class="player-container"></div>
-    </section>
+    <div id="atm-music-root"></div>
 
     <!-- Hidden Player -->
     <div id="youtube-player" style="display: none; position: absolute; pointer-events: none;"></div>

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { YouTubeMusicViewProvider } from './focus/view/view';
+import { YouTubeMusicViewProvider } from './focus/focus';
 
 export function activate(context: vscode.ExtensionContext) {
 
