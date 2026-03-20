@@ -158,12 +158,16 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
     max-width: 600px;
     justify-content: center;
     flex-wrap: wrap;
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--vscode-input-border, rgba(128, 128, 128, 0.3));
+    background: color-mix(in srgb, var(--vscode-editor-background) 88%, transparent);
 }
 
 .qa-btn {
     background-color: var(--vscode-button-secondaryBackground);
     color: var(--vscode-button-secondaryForeground);
-    border: none;
+    border: 1px solid transparent;
     border-radius: 50px;
     padding: 5px 12px;
     font-size: 11px;
@@ -191,6 +195,7 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
 .qa-btn.is-active {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
+    border-color: color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent);
     opacity: 1;
 }
 
