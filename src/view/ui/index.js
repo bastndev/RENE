@@ -14,6 +14,7 @@
     let fallbackTried = new Set();
     let isPlayButtonLoading = false;
     let isLoopEnabled = false;
+    let activePlayerSource = 'none';
 
     // --- DOM helpers ---
     const $ = (s) => document.querySelector(s);
@@ -48,6 +49,8 @@
     }
 
     function onPlayerStateChange(event) {
+        if (activePlayerSource !== 'youtube') { return; }
+
         // YT.PlayerState.PLAYING = 1
         // YT.PlayerState.PAUSED = 2
         // YT.PlayerState.ENDED = 0
@@ -82,6 +85,8 @@
     }
 
     function onPlayerError(event) {
+        if (activePlayerSource !== 'youtube') { return; }
+
         const errorCodes = {
             2: 'Invalid parameter',
             5: 'HTML5 player error',
@@ -135,6 +140,7 @@
         }
 
         setPlayButtonLoading(true);
+        activePlayerSource = 'deezer';
 
         // Limpiar reproductor anterior
         if (deezerAudio) {
@@ -145,42 +151,53 @@
         // Crear reproductor de audio para preview
         const container = $('#player-container');
         if (container) {
-            const hasPrev = currentIndex > 0;
-            const hasNext = currentIndex < results.length - 1;
+            const hasControls = !!$('#play-pause-btn') && !!$('#progress-bar') && !!$('#volume-btn');
 
-            container.innerHTML = `
-                <div class="player-content">
-                    <div class="player-progress">
-                        <span id="current-time">0:00</span>
-                        <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
-                        <span id="total-time">0:30</span>
-                    </div>
-                    <div class="player-controls">
-                        <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                            </svg>
-                        </button>
-                        <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                            </svg>
-                        </button>
-                        <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                <path id="play-path" d="M8 5v14l11-7z"/>
-                            </svg>
-                        </button>
-                        <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
-                            </svg>
-                        </button>
-                        <button id="repeat-btn" class="control-btn control-btn-sm${isLoopEnabled ? ' active' : ''}" aria-label="Repeat">
-                                ${getRepeatIconSvg(isLoopEnabled)}
-                        </button>
-                    </div>
-                </div>`;
+            if (!hasControls) {
+                const hasPrev = currentIndex > 0;
+                const hasNext = currentIndex < results.length - 1;
+
+                container.innerHTML = `
+                    <div class="player-content">
+                        <div class="player-progress">
+                            <span id="current-time">0:00</span>
+                            <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0" step="1">
+                            <span id="total-time">0:30</span>
+                        </div>
+                        <div class="player-controls">
+                            <button id="volume-btn" class="control-btn control-btn-sm" aria-label="Volume">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    <path id="vol-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                                </svg>
+                            </button>
+                            <button id="prev-btn" class="control-btn${hasPrev ? '' : ' disabled'}" aria-label="Previous">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                                </svg>
+                            </button>
+                            <button id="play-pause-btn" class="control-btn play-btn" aria-label="Play">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <path id="play-path" d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
+                            <button id="next-btn" class="control-btn${hasNext ? '' : ' disabled'}" aria-label="Next">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                                </svg>
+                            </button>
+                            <button id="repeat-btn" class="control-btn control-btn-sm${isLoopEnabled ? ' active' : ''}" aria-label="Repeat">
+                                    ${getRepeatIconSvg(isLoopEnabled)}
+                            </button>
+                        </div>
+                    </div>`;
+            } else {
+                const cur = $('#current-time');
+                const bar = $('#progress-bar');
+                const total = $('#total-time');
+                if (cur) { cur.textContent = '0:00'; }
+                if (bar) { bar.value = '0'; }
+                if (total) { total.textContent = '0:30'; }
+            }
 
             // Crear elemento de audio
             deezerAudio = new Audio(track.preview);
@@ -233,52 +250,52 @@
             const repeatBtn = $('#repeat-btn');
 
             if (playPauseBtn) {
-                playPauseBtn.addEventListener('click', () => {
+                playPauseBtn.onclick = () => {
                     if (isPlaying) {
                         deezerAudio.pause();
                     } else {
                         deezerAudio.play();
                     }
-                });
+                };
             }
 
             if (prevBtn && !prevBtn.classList.contains('disabled')) {
-                prevBtn.addEventListener('click', () => {
+                prevBtn.onclick = () => {
                     if (currentIndex > 0) { selectTrack(currentIndex - 1); }
-                });
+                };
             }
 
             if (nextBtn && !nextBtn.classList.contains('disabled')) {
-                nextBtn.addEventListener('click', () => {
+                nextBtn.onclick = () => {
                     if (currentIndex < results.length - 1) { selectTrack(currentIndex + 1); }
-                });
+                };
             }
 
             if (progressBar) {
-                progressBar.addEventListener('input', (e) => {
+                progressBar.oninput = (e) => {
                     if (deezerAudio && deezerAudio.duration) {
                         const seekTo = (e.target.value / 1000) * deezerAudio.duration;
                         deezerAudio.currentTime = seekTo;
                     }
-                });
+                };
             }
 
             if (volumeBtn) {
-                volumeBtn.addEventListener('click', () => {
+                volumeBtn.onclick = () => {
                     isMuted = !isMuted;
                     deezerAudio.muted = isMuted;
                     updateVolumeIcon();
-                });
+                };
             }
 
             if (repeatBtn) {
                 repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
-                repeatBtn.addEventListener('click', () => {
+                repeatBtn.onclick = () => {
                     isLoopEnabled = !isLoopEnabled;
                     repeatBtn.classList.toggle('active', isLoopEnabled);
                     repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
                     repeatBtn.innerHTML = getRepeatIconSvg(isLoopEnabled);
-                });
+                };
             }
 
             // Reproducir automáticamente
@@ -409,6 +426,7 @@
         selectedTrackIndex = index;
         playbackIndex = index;
         fallbackTried = new Set();
+        activePlayerSource = 'none';
         const track = results[index];
         if (!track) { return; }
 
@@ -503,6 +521,7 @@
         fallbackTried.add(index);
 
         if (track.videoId && ytPlayer && ytPlayer.loadVideoById) {
+            activePlayerSource = 'youtube';
             setPlayButtonLoading(true);
             ytPlayer.loadVideoById(track.videoId);
             ytPlayer.playVideo();
@@ -510,6 +529,7 @@
         }
 
         if (track.preview) {
+            activePlayerSource = 'deezer';
             playDeezerPreview(track);
             return true;
         }
@@ -592,6 +612,7 @@
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => {
                 if (isPlayButtonLoading) return;
+                if (activePlayerSource !== 'youtube') return;
                 if (!ytPlayer || !playerReady) return;
                 
                 if (isPlaying) {
@@ -616,6 +637,7 @@
 
         if (progressBar) {
             progressBar.addEventListener('input', (e) => {
+                if (activePlayerSource !== 'youtube') return;
                 if (ytPlayer && ytPlayer.seekTo) {
                     const duration = ytPlayer.getDuration();
                     const seekTo = (e.target.value / 1000) * duration;
@@ -626,6 +648,7 @@
 
         if (volumeBtn) {
             volumeBtn.addEventListener('click', () => {
+                if (activePlayerSource !== 'youtube') return;
                 if (!ytPlayer) return;
                 isMuted = !isMuted;
                 if (isMuted) {
@@ -639,6 +662,7 @@
 
         if (repeatBtn) {
             repeatBtn.addEventListener('click', () => {
+                if (activePlayerSource !== 'youtube') return;
                 isLoopEnabled = !isLoopEnabled;
                 repeatBtn.classList.toggle('active', isLoopEnabled);
                 repeatBtn.style.opacity = isLoopEnabled ? '1' : '';
@@ -715,7 +739,9 @@
     if (backToSearch) {
         backToSearch.addEventListener('click', () => {
             if (ytPlayer) ytPlayer.pauseVideo();
+            if (deezerAudio) deezerAudio.pause();
             isPlaying = false;
+            activePlayerSource = 'none';
             showScreen('search');
         });
     }
