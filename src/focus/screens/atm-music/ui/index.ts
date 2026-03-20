@@ -447,7 +447,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
         const trackInfo = this.$('#player-track-info');
         if (trackInfo) {
-            const truncatedTitle = this.truncateWithDots(track.title, 34);
+            const truncatedTitle = this.getHeaderTitleWithDots(track.title, track.artist);
             trackInfo.innerHTML = `
                 <span class="header-track-artist">${this.escapeHtml(track.artist)}</span>
                 <span class="header-track-separator"> - </span>
@@ -911,6 +911,12 @@ class AtmMusicControllerImpl implements AtmMusicController {
         }
 
         return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+    }
+
+    private getHeaderTitleWithDots(title: string, artist: string): string {
+        const safeArtistLength = (artist || '').trim().length;
+        const adaptiveMax = Math.max(12, Math.min(28, 38 - safeArtistLength));
+        return this.truncateWithDots(title, adaptiveMax);
     }
 
     private $(selector: string): HTMLElement | null {
