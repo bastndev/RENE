@@ -361,6 +361,16 @@
     height: 14px;
 }
 
+#repeat-btn.active {
+    opacity: 1;
+    color: #f2c14e;
+    background: rgba(242, 193, 78, 0.18);
+}
+
+#repeat-btn.active:hover {
+    opacity: 1;
+}
+
 .error-msg {
     text-align: center;
     padding: 24px 12px;

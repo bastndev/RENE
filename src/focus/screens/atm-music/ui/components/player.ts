@@ -210,12 +210,31 @@ export class MusicPlayerUI {
                     <button id="prev-btn" class="control-btn ${hasPrev ? '' : 'disabled'}" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
                     <button id="play-pause-btn" class="control-btn play-btn" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path id="play-path" d="M8 5v14l11-7z"/></svg></button>
                     <button id="next-btn" class="control-btn ${hasNext ? '' : 'disabled'}" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-                    <button id="repeat-btn" class="control-btn control-btn-sm ${this.isLoopEnabled ? 'active' : ''}" type="button">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/><path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/></svg>
+                    <button id="repeat-btn" class="control-btn control-btn-sm ${this.isLoopEnabled ? 'active' : ''}" type="button" aria-pressed="${this.isLoopEnabled ? 'true' : 'false'}">
+                        ${this.getRepeatIconSvg()}
                     </button>
                 </div>
             </div>`;
         this.setupControlEvents();
+    }
+
+    private getRepeatIconSvg() {
+        if (this.isLoopEnabled) {
+            return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/><path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/><text x="12" y="16" font-size="10" font-weight="bold" text-anchor="middle" fill="currentColor" font-family="sans-serif">1</text></svg>';
+        }
+
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/><path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/></svg>';
+    }
+
+    private refreshRepeatButton() {
+        const repeatBtn = $('#repeat-btn');
+        if (!repeatBtn) {
+            return;
+        }
+
+        repeatBtn.classList.toggle('active', this.isLoopEnabled);
+        repeatBtn.setAttribute('aria-pressed', this.isLoopEnabled ? 'true' : 'false');
+        repeatBtn.innerHTML = this.getRepeatIconSvg();
     }
 
     private setupControlEvents() {
@@ -241,7 +260,7 @@ export class MusicPlayerUI {
 
     private toggleLoop() {
         this.isLoopEnabled = !this.isLoopEnabled;
-        $('#repeat-btn')?.classList.toggle('active', this.isLoopEnabled);
+        this.refreshRepeatButton();
     }
 
     private seek(value: string) {
