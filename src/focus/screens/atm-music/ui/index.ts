@@ -442,7 +442,8 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
         if (this.deezerAudio) {
             this.deezerAudio.pause();
-            this.deezerAudio = null;
+            this.deezerAudio.src = '';
+            this.deezerAudio.load();
         }
 
         const trackInfo = this.$('#player-track-info');
@@ -564,9 +565,15 @@ class AtmMusicControllerImpl implements AtmMusicController {
         this.setPlayButtonLoading(true);
         this.activePlayerSource = 'deezer';
 
-        if (this.deezerAudio) {
+        // Reuse Audio instance to avoid memory leaks
+        if (!this.deezerAudio) {
+            this.deezerAudio = new Audio();
+            this.deezerAudio.crossOrigin = 'anonymous';
+        } else {
+            this.stopProgressLoop();
             this.deezerAudio.pause();
-            this.deezerAudio = null;
+            this.deezerAudio.removeAttribute('src'); // Stop current loading
+            this.deezerAudio.load();
         }
 
         const cur = this.$('#current-time');
@@ -582,8 +589,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
             total.textContent = '0:30';
         }
 
-        this.deezerAudio = new Audio(track.preview);
-        this.deezerAudio.crossOrigin = 'anonymous';
+        this.deezerAudio.src = track.preview;
 
         this.deezerAudio.onplay = () => {
             this.setPlayButtonLoading(false);
@@ -668,10 +674,25 @@ class AtmMusicControllerImpl implements AtmMusicController {
         this.stopProgressLoop();
 
         const update = () => {
+            // Safety: Stop the loop if we are not playing anymore
+            if (!this.isPlaying || this.activePlayerSource === 'none') {
+                this.stopProgressLoop();
+                return;
+            }
+
             if (this.activePlayerSource === 'deezer' && this.deezerAudio && this.deezerAudio.duration) {
                 this.updateProgressBar(this.deezerAudio.currentTime, this.deezerAudio.duration);
             } else if (this.activePlayerSource === 'youtube' && this.ytPlayer && this.ytPlayer.getCurrentTime) {
-                this.updateProgressBar(this.ytPlayer.getCurrentTime(), this.ytPlayer.getDuration());
+                try {
+                    const dur = this.ytPlayer.getDuration();
+                    if (dur > 0) {
+                        this.updateProgressBar(this.ytPlayer.getCurrentTime(), dur);
+                    }
+                } catch (e) {
+                    // Possible player not ready or destroyed
+                    this.stopProgressLoop();
+                    return;
+                }
             }
             this.progressTimer = requestAnimationFrame(update);
         };
