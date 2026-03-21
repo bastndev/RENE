@@ -1,18 +1,9 @@
+import { Track, WebviewMessage } from '../../../data/types';
+
 declare const YT: any;
 
 interface VSCodeApi {
-    postMessage: (message: unknown) => void;
-}
-
-interface TrackResult {
-    id: string;
-    title: string;
-    artist: string;
-    album: string;
-    thumbnail: string;
-    duration: number;
-    videoId?: string;
-    preview?: string;
+    postMessage: (message: WebviewMessage) => void;
 }
 
 type SearchButtonMode = 'disabled' | 'search' | 'forward';
@@ -27,7 +18,7 @@ export function createAtmMusicController(vscode: VSCodeApi): AtmMusicController 
 }
 
 class AtmMusicControllerImpl implements AtmMusicController {
-    private results: TrackResult[] = [];
+    private results: Track[] = [];
     private lastSearchQuery = '';
     private hasCachedSearch = false;
     private canForwardFromSearch = false;
@@ -249,7 +240,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
 
     private bindWebviewMessages() {
         window.addEventListener('message', (event: MessageEvent) => {
-            const msg = event.data as { type?: string; results?: TrackResult[]; message?: string };
+            const msg = event.data as WebviewMessage;
             switch (msg.type) {
                 case 'searchResults':
                     this.hasCachedSearch = true;
@@ -395,7 +386,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
         }
     }
 
-    private renderResults(items: TrackResult[]) {
+    private renderResults(items: Track[]) {
         this.results = items;
         const container = this.$('#results-container');
         if (!container) {
@@ -463,7 +454,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
         }
     }
 
-    private renderPlayerUI(track: TrackResult) {
+    private renderPlayerUI(track: Track) {
         const container = this.$('#player-container');
         if (!container) {
             return;
@@ -556,7 +547,7 @@ class AtmMusicControllerImpl implements AtmMusicController {
         return false;
     }
 
-    private playDeezerPreview(track: TrackResult) {
+    private playDeezerPreview(track: Track) {
         if (!track.preview) {
             this.showPlayerError('No preview available for this track');
             return;

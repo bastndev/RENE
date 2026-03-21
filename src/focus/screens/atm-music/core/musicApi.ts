@@ -1,22 +1,35 @@
 import * as vscode from 'vscode';
 import YTMusic from 'ytmusic-api';
+import { Track } from '../../../data/types';
 
 function getLastFmApiKey(): string {
     const config = vscode.workspace.getConfiguration('rene');
     return config.get<string>('lastfmApiKey', '');
 }
 
-export interface SearchResult {
-    videoId?: string;
-    id: string;
+// Internal Interfaces for API Response Mapping
+interface YTSong {
+    videoId: string;
+    name: string;
+    artist?: { name: string };
+    album?: { name: string };
+    thumbnails?: { url: string }[];
+    duration?: number;
+}
+
+interface DeezerTrack {
+    id: number;
     title: string;
-    artist: string;
-    album: string;
-    thumbnail: string;
+    artist: { name: string };
+    album: { title: string; cover_big: string };
     duration: number;
-    preview?: string;
-    provider: 'youtube' | 'deezer' | 'lastfm';
-    canPlay: boolean;
+    preview: string;
+}
+
+interface LastFMTrack {
+    name: string;
+    artist: string;
+    image?: { '#text': string; size: string }[];
 }
 
 const ytmusic = new YTMusic();
@@ -33,13 +46,13 @@ async function initYTMusic(): Promise<void> {
     }
 }
 
-async function searchYouTubeMusic(query: string): Promise<SearchResult[]> {
+async function searchYouTubeMusic(query: string): Promise<Track[]> {
     await initYTMusic();
 
     try {
-        const songs = await ytmusic.searchSongs(query);
+        const songs = await ytmusic.searchSongs(query) as unknown as YTSong[];
 
-        return songs.slice(0, 25).map((song: any) => ({
+        return songs.slice(0, 25).map((song) => ({
             id: song.videoId,
             videoId: song.videoId,
             title: song.name,
@@ -59,18 +72,18 @@ async function searchYouTubeMusic(query: string): Promise<SearchResult[]> {
     }
 }
 
-async function searchDeezer(query: string): Promise<SearchResult[]> {
+async function searchDeezer(query: string): Promise<Track[]> {
     try {
         const response = await fetch(
             `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=25`,
         );
-        const data: any = await response.json();
+        const data = await response.json() as { data?: DeezerTrack[] };
 
         if (!data.data) {
             return [];
         }
 
-        return data.data.map((track: any) => ({
+        return data.data.map((track) => ({
             id: `deezer_${track.id}`,
             title: track.title,
             artist: track.artist.name,
@@ -87,7 +100,7 @@ async function searchDeezer(query: string): Promise<SearchResult[]> {
     }
 }
 
-async function searchLastFM(query: string): Promise<SearchResult[]> {
+async function searchLastFM(query: string): Promise<Track[]> {
     const apiKey = getLastFmApiKey();
     if (!apiKey) {
         console.warn("[RENE Music] Last.FM API key not configured. Set 'rene.lastfmApiKey' in settings.");
@@ -98,22 +111,21 @@ async function searchLastFM(query: string): Promise<SearchResult[]> {
         const response = await fetch(
             `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(query)}&api_key=${apiKey}&format=json&limit=25`,
         );
-        const data: any = await response.json();
+        const data = await response.json() as { results?: { trackmatches?: { track: LastFMTrack | LastFMTrack[] } } };
 
         if (!data.results?.trackmatches?.track) {
             return [];
         }
 
-        const tracks = Array.isArray(data.results.trackmatches.track)
-            ? data.results.trackmatches.track
-            : [data.results.trackmatches.track];
+        const rawTracks = data.results.trackmatches.track;
+        const tracks = Array.isArray(rawTracks) ? rawTracks : [rawTracks];
 
-        return tracks.map((track: any) => ({
+        return tracks.map((track) => ({
             id: `lastfm_${track.name}_${track.artist}`,
             title: track.name,
             artist: track.artist,
             album: '',
-            thumbnail: track.image?.find((i: any) => i.size === 'large')?.['#text'] || '',
+            thumbnail: track.image?.find((i) => i.size === 'large')?.['#text'] || '',
             duration: 0,
             provider: 'lastfm' as const,
             canPlay: false,
@@ -124,13 +136,13 @@ async function searchLastFM(query: string): Promise<SearchResult[]> {
     }
 }
 
-export async function searchMusic(query: string): Promise<SearchResult[]> {
+export async function searchMusic(query: string): Promise<Track[]> {
     console.log(`[RENE Music] Searching for: "${query}"`);
 
-    const withTimeout = (promise: Promise<SearchResult[]>, ms: number, name: string) =>
-        Promise.race<SearchResult[]>([
+    const withTimeout = (promise: Promise<Track[]>, ms: number, name: string) =>
+        Promise.race<Track[]>([
             promise,
-            new Promise<SearchResult[]>((_, reject) => {
+            new Promise<Track[]>((_, reject) => {
                 setTimeout(() => reject(new Error(`Timeout: ${name}`)), ms);
             }),
         ]);
@@ -140,10 +152,10 @@ export async function searchMusic(query: string): Promise<SearchResult[]> {
         withTimeout(searchDeezer(query), 10000, 'Deezer'),
     ]);
 
-    const allResults: SearchResult[] = [];
+    const allResults: Track[] = [];
 
     if (youtubeResult.status === 'fulfilled') {
-        allResults.push(...youtubeResult.value);
+        allResults.push(...youtubeResult.status === 'fulfilled' ? youtubeResult.value : []);
     } else {
         console.warn('[RENE Music] YouTube search failed/timeout:', youtubeResult.reason);
     }
