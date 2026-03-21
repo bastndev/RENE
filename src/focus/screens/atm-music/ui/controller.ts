@@ -124,7 +124,7 @@ export class AtmMusicController {
     }
 
     private backToSearch() {
-        this.playerUI.stop();
+        // Keep current playback alive while browsing back to Search.
         this.showScreen('search');
         this.searchUI.setCanForward(this.hasCachedSearch);
     }

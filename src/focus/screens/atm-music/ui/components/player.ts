@@ -12,6 +12,7 @@ export class MusicPlayerUI {
     private isPlaying = false;
     private isMuted = false;
     private isLoopEnabled = false;
+    private suppressPlaybackEvents = false;
     private activeSource: 'none' | 'youtube' | 'deezer' = 'none';
     private playerReady = false;
     private pendingTrack: Track | null = null;
@@ -33,7 +34,7 @@ export class MusicPlayerUI {
     }
 
     public playTrack(track: Track, hasPrev: boolean, hasNext: boolean) {
-        this.stop();
+        this.stopPlayback();
         this.render(track, hasPrev, hasNext);
         this.updateTrackHeader(track);
         this.setLoading(true);
@@ -45,6 +46,8 @@ export class MusicPlayerUI {
      * Used both for initial play and for fallback skipping.
      */
     private attemptPlay(track: Track) {
+        this.suppressPlaybackEvents = false;
+
         if (track.videoId) {
             if (!this.playerReady) {
                 // Wait for the player to be ready before playing
@@ -91,7 +94,9 @@ export class MusicPlayerUI {
         this.attemptPlay(track);
     }
 
-    private stopPlayback() {
+    private stopPlayback(suppressEvents = false) {
+        this.suppressPlaybackEvents = suppressEvents;
+
         if (this.activeSource === 'youtube' && this.ytPlayer) {
             this.ytPlayer.stopVideo();
         }
@@ -102,7 +107,9 @@ export class MusicPlayerUI {
         }
         this.isPlaying = false;
         this.activeSource = 'none';
+        this.pendingTrack = null;
         this.stopProgressLoop();
+        this.setLoading(false);
     }
 
     public pause() {
@@ -111,7 +118,8 @@ export class MusicPlayerUI {
     }
 
     public stop() {
-        this.stopPlayback();
+        // Called when navigating back to Search: ignore delayed media callbacks.
+        this.stopPlayback(true);
     }
 
     private initializeYouTube() {
@@ -128,13 +136,22 @@ export class MusicPlayerUI {
                         }
                     },
                     onStateChange: (e: any) => this.onYTStateChange(e),
-                    onError: () => this.onFallback()
+                    onError: () => {
+                        if (this.suppressPlaybackEvents) {
+                            return;
+                        }
+                        this.onFallback();
+                    }
                 }
             });
         };
     }
 
     private onYTStateChange(event: any) {
+        if (this.suppressPlaybackEvents) {
+            return;
+        }
+
         if (event.data === YT.PlayerState.PLAYING) {
             this.isPlaying = true;
             this.setLoading(false);
@@ -163,6 +180,9 @@ export class MusicPlayerUI {
         this.deezerAudio.src = url;
 
         this.deezerAudio.onplay = () => {
+            if (this.suppressPlaybackEvents) {
+                return;
+            }
             this.isPlaying = true;
             this.setLoading(false);
             this.updateIcons();
@@ -170,12 +190,18 @@ export class MusicPlayerUI {
         };
 
         this.deezerAudio.onpause = () => {
+            if (this.suppressPlaybackEvents) {
+                return;
+            }
             this.isPlaying = false;
             this.updateIcons();
             this.stopProgressLoop();
         };
 
         this.deezerAudio.onended = () => {
+            if (this.suppressPlaybackEvents) {
+                return;
+            }
             if (this.isLoopEnabled) {
                 this.deezerAudio?.play();
             } else {
@@ -184,6 +210,9 @@ export class MusicPlayerUI {
         };
 
         this.deezerAudio.onerror = () => {
+            if (this.suppressPlaybackEvents) {
+                return;
+            }
             this.onFallback();
         };
 
