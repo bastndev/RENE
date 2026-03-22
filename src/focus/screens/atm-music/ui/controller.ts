@@ -28,7 +28,8 @@ export class AtmMusicController {
         this.resultsUI = new MusicResultsUI(
             (i) => this.selectTrack(i),
             (q) => this.performSearch(q),
-            () => this.backToSearch()
+            () => this.backToSearch(),
+            () => this.showScreen('player')
         );
 
         this.playerUI = new MusicPlayerUI(
@@ -138,6 +139,11 @@ export class AtmMusicController {
                 el.classList.toggle('active', id === `screen-${name}`);
             }
         });
+
+        // Tell results list if there's an active track we can return to
+        if (name === 'results') {
+            this.resultsUI.setCanForward(this.currentIndex > -1);
+        }
     }
 
     private handlePlaybackFallback() {

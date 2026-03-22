@@ -6,11 +6,13 @@ export class MusicResultsUI {
     private queryInput: HTMLInputElement | null = null;
     private queryBtn: HTMLButtonElement | null = null;
     private lastQuery = '';
+    private canForward = false;
 
     constructor(
         private readonly onSelect: (index: number) => void,
         private readonly onSearch: (query: string) => void,
-        private readonly onBack: () => void
+        private readonly onBack: () => void,
+        private readonly onForward: () => void
     ) {
         this.container = $('#results-container');
         this.queryInput = $('#results-query-input') as HTMLInputElement | null;
@@ -78,7 +80,12 @@ export class MusicResultsUI {
             this.queryInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     const q = (this.queryInput?.value || '').trim();
-                    if (q && q !== this.lastQuery) this.onSearch(q);
+                    const isUnchanged = q === this.lastQuery && q.length > 0;
+                    if (isUnchanged && this.canForward) {
+                        this.onForward();
+                    } else if (q && !isUnchanged) {
+                        this.onSearch(q);
+                    }
                 }
             });
         }
@@ -86,16 +93,38 @@ export class MusicResultsUI {
         if (this.queryBtn) {
             this.queryBtn.addEventListener('click', () => {
                 const q = (this.queryInput?.value || '').trim();
-                if (q && q !== this.lastQuery) this.onSearch(q);
+                const isUnchanged = q === this.lastQuery && q.length > 0;
+                
+                if (isUnchanged && this.canForward) {
+                    this.onForward();
+                } else if (q && !isUnchanged) {
+                    this.onSearch(q);
+                }
             });
         }
+    }
+
+    public setCanForward(enabled: boolean) {
+        this.canForward = enabled;
+        this.updateButtonState();
     }
 
     private updateButtonState() {
         if (!this.queryBtn) return;
         const q = (this.queryInput?.value || '').trim();
-        const isDisabled = !q || q === this.lastQuery;
+        const isUnchanged = q === this.lastQuery && q.length > 0;
+        
+        // Disable if empty, or if unchanged but we CANNOT go forward
+        const isDisabled = q.length === 0 || (isUnchanged && !this.canForward);
+        
         this.queryBtn.disabled = isDisabled;
         this.queryBtn.classList.toggle('is-disabled', isDisabled);
+        
+        if (isUnchanged && this.canForward) {
+            this.queryBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+        } else {
+            // Search icon if changing query
+            this.queryBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
+        }
     }
 }
