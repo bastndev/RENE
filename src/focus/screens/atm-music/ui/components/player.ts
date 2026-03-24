@@ -34,11 +34,15 @@ export class MusicPlayerUI {
     }
 
     public playTrack(track: Track, hasPrev: boolean, hasNext: boolean) {
-        this.stopPlayback();
-        this.render(track, hasPrev, hasNext);
-        this.updateTrackHeader(track);
-        this.setLoading(true);
-        this.attemptPlay(track);
+        if (!this.container?.querySelector('.player-content')) {
+            this.stopPlayback();
+            this.render(track, hasPrev, hasNext);
+            this.updateTrackHeader(track);
+            this.setLoading(true);
+            this.attemptPlay(track);
+        } else {
+            this.skipToTrack(track, hasPrev, hasNext);
+        }
     }
 
     /**
@@ -47,6 +51,9 @@ export class MusicPlayerUI {
      */
     private attemptPlay(track: Track) {
         this.suppressPlaybackEvents = false;
+
+        const qaBtn = $('#qa-play-btn');
+        if (qaBtn) qaBtn.style.display = 'inline-flex';
 
         if (track.videoId) {
             if (!this.playerReady) {
@@ -84,11 +91,15 @@ export class MusicPlayerUI {
             nextBtn.classList.toggle('disabled', !hasNext);
         }
 
-        // Update total time
+        // Update total time and reset progress bar
         const totalTime = $('#total-time');
         if (totalTime) {
             totalTime.textContent = formatDuration(track.duration);
         }
+        const bar = $('#progress-bar') as HTMLInputElement | null;
+        if (bar) bar.value = '0';
+        const curTime = $('#current-time');
+        if (curTime) curTime.textContent = '0:00';
 
         this.setLoading(true);
         this.attemptPlay(track);
@@ -110,6 +121,9 @@ export class MusicPlayerUI {
         this.pendingTrack = null;
         this.stopProgressLoop();
         this.setLoading(false);
+
+        const qaBtn = $('#qa-play-btn');
+        if (qaBtn) qaBtn.style.display = 'none';
     }
 
     public pause() {
@@ -321,17 +335,17 @@ export class MusicPlayerUI {
         if (btn) {
             btn.classList.toggle('loading', loading);
             (btn as HTMLButtonElement).disabled = loading;
-            
-            const svg = btn.querySelector('svg');
-            if (svg) {
-                svg.style.opacity = loading ? '0' : '1';
-            }
         }
     }
 
     private updateIcons() {
+        const playIconD = this.isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z';
         const playPath = $('#play-path');
-        playPath?.setAttribute('d', this.isPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z');
+        playPath?.setAttribute('d', playIconD);
+
+        const qaPath = $('#qa-play-path');
+        qaPath?.setAttribute('d', playIconD);
+
         const volPath = $('#vol-path');
         volPath?.setAttribute('d', this.isMuted ? 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3z' : 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
         const volumeBtn = $('#volume-btn');
@@ -347,5 +361,17 @@ export class MusicPlayerUI {
 
     private setupBackEvents() {
         $('#back-to-results')?.addEventListener('click', () => this.onBack());
+        
+        const qaBtn = $('#qa-play-btn');
+        if (qaBtn) {
+            qaBtn.replaceWith(qaBtn.cloneNode(true));
+            $('#qa-play-btn')?.addEventListener('click', (e: Event) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (this.activeSource !== 'none' || this.pendingTrack) {
+                    this.togglePlayback();
+                }
+            });
+        }
     }
 }

@@ -3,11 +3,18 @@
 	pointer-events: none;
 }
 
+.play-btn.loading svg {
+	opacity: 0;
+}
+
 .play-btn.loading::after {
 	content: '';
 	position: absolute;
-	width: 14px;
-	height: 14px;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 16px;
+	height: 16px;
 	border-radius: 50%;
 	background: linear-gradient(
 		90deg,
@@ -16,7 +23,7 @@
 		rgba(255, 255, 255, 0.10) 75%
 	);
 	background-size: 200% 100%;
-	animation: play-btn-skeleton-shimmer 1s linear infinite;
+	animation: play-btn-skeleton-shimmer 1.5s linear infinite;
 }
 
 body.vscode-light .play-btn.loading::after {

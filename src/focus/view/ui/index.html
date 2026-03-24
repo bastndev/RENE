@@ -31,7 +31,14 @@
         </div>
 
         <div class="quick-access">
-            <button class="qa-btn is-active" type="button" aria-current="true">Music</button>
+            <button class="qa-btn is-active" type="button" aria-current="true" style="display: inline-flex; align-items: center; gap: 6px;">
+                Music
+                <span id="qa-play-btn" style="display: none; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; opacity: 0.9; cursor: pointer;" title="Play/Pause">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path id="qa-play-path" d="M8 5v14l11-7z"/>
+                    </svg>
+                </span>
+            </button>
             <button class="qa-btn" type="button" data-screen="time">Time</button>
             <button class="qa-btn" type="button" data-screen="game">Game</button>
         </div>
