@@ -125,9 +125,18 @@ export class MusicPlayerUI {
         this.audioPlayer.onplay = () => {
             if (this.suppressPlaybackEvents) return;
             this.isPlaying = true;
-            this.setLoading(false);
             this.updateIcons();
             this.startProgressLoop();
+        };
+
+        this.audioPlayer.onplaying = () => {
+            if (this.suppressPlaybackEvents) return;
+            this.setLoading(false);
+        };
+
+        this.audioPlayer.onwaiting = () => {
+            if (this.suppressPlaybackEvents) return;
+            this.setLoading(true);
         };
 
         this.audioPlayer.onpause = () => {
@@ -202,8 +211,12 @@ export class MusicPlayerUI {
     }
 
     private togglePlayback() {
-        if (this.isPlaying) this.pause();
-        else this.audioPlayer.play();
+        if (this.isPlaying) {
+            this.pause();
+        } else {
+            this.setLoading(true);
+            this.audioPlayer.play().catch(() => this.setLoading(false));
+        }
     }
 
     private toggleMute() {
