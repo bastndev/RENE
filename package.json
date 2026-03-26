@@ -48,31 +48,6 @@
           "icon": "$(music)"
         }
       ]
-    },
-    "configuration": {
-      "title": "ATM",
-      "properties": {
-        "rene.lastfmApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Last.FM API key for additional music metadata. Get yours at https://www.last.fm/api/account/create"
-        },
-        "rene.jamendoClientId": {
-          "type": "string",
-          "default": "b0838540",
-          "description": "Jamendo API Client ID for free track streaming. Get yours at https://developer.jamendo.com/v3.0"
-        },
-        "rene.jiosaavnApiUrl": {
-          "type": "string",
-          "default": "https://jiosaavn-api-sigma-sandy.vercel.app",
-          "description": "JioSaavn API URL (self-host recommended: https://github.com/sumitkolhe/jiosaavn-api)"
-        },
-        "rene.yandexToken": {
-          "type": "string",
-          "default": "",
-          "description": "Yandex Music OAuth token"
-        }
-      }
     }
   },
   "scripts": {

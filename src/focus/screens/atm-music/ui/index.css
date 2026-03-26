@@ -264,10 +264,8 @@
 }
 
 .result-badge.provider-netease { background: rgba(224, 63, 64, 0.15); color: #ff6b6b; }
-.result-badge.provider-jamendo { background: rgba(132, 112, 255, 0.15); color: #a192ff; }
 .result-badge.provider-deezer { background: rgba(0, 199, 242, 0.15); color: #4de1ff; }
 .result-badge.provider-jiosaavn { background: rgba(245, 158, 11, 0.15); color: #fcc253; }
-.result-badge.provider-yandex { background: rgba(239, 68, 68, 0.15); color: #fc5c5c; }
 
 .result-badge.quality { background: rgba(255, 255, 255, 0.1); color: var(--vscode-descriptionForeground); border: 1px solid rgba(255,255,255,0.05); }
 .result-badge.preview { background: rgba(255, 165, 0, 0.15); color: #ffbc42; }

@@ -3,7 +3,7 @@
  * Unified interfaces for the entire extension and webview.
  */
 
-export type MusicProvider = 'netease' | 'jamendo' | 'jiosaavn' | 'yandex' | 'deezer';
+export type MusicProvider = 'netease' | 'jiosaavn' | 'deezer';
 
 export interface Track {
     id: string;

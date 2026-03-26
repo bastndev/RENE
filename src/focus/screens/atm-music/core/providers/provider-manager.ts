@@ -1,11 +1,8 @@
-import * as vscode from 'vscode';
 import { Track } from '../../../../shared/types';
 import { IMusicProvider } from './base-provider';
 import { NeteaseProvider } from './netease-provider';
-import { JamendoProvider } from './jamendo-provider';
 import { DeezerProvider } from './deezer-provider';
 import { JioSaavnProvider } from './jiosaavn-provider';
-import { YandexProvider } from './yandex-provider';
 
 /**
  * Aggregates all music providers, manages fallback/priority logic.
@@ -18,23 +15,12 @@ export class ProviderManager {
     }
 
     private initializeProviders() {
-        const config = vscode.workspace.getConfiguration('rene');
-        
         // Always try Netease First (Bundle default)
         this.providers.push(new NeteaseProvider());
         
         // Add Tier 1 (Free Full Streaming)
-        const jamendoClientId = config.get<string>('jamendoClientId') || 'b0838540';
-        this.providers.push(new JamendoProvider(jamendoClientId));
+        this.providers.push(new JioSaavnProvider());
         
-        const jiosaavnUrl = config.get<string>('jiosaavnApiUrl') || 'https://jiosaavn-api-sigma-sandy.vercel.app';
-        this.providers.push(new JioSaavnProvider(jiosaavnUrl));
-        
-        const yandexToken = config.get<string>('yandexToken');
-        if (yandexToken) {
-            this.providers.push(new YandexProvider(yandexToken));
-        }
-
         // Add Tier 2 (Metadata + Previews, fallback)
         this.providers.push(new DeezerProvider());
 
