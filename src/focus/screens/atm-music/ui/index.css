@@ -263,7 +263,7 @@
     color: var(--vscode-descriptionForeground);
 }
 
-.result-badge.provider-netease { background: rgba(0, 212, 170, 0.15); color: #00d4aa; }
+.result-badge.provider-netease { background: rgba(0, 162, 255, 0.15); color: #00a2ff; }
 .result-badge.provider-deezer { background: rgba(0, 199, 242, 0.15); color: #4de1ff; }
 .result-badge.provider-jiosaavn { background: rgba(245, 158, 11, 0.15); color: #fcc253; }
 
