@@ -26,6 +26,7 @@ export class MusicPlayerUI {
         this.audioPlayer.crossOrigin = 'anonymous';
         this.setupAudioEvents();
         this.setupBackEvents();
+        this.setupKeyboardEvents();
     }
 
     public isRunning(): boolean {
@@ -434,5 +435,24 @@ export class MusicPlayerUI {
                 }
             });
         }
+    }
+
+    private setupKeyboardEvents() {
+        document.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                // Do not trigger if user is typing in an input or textarea
+                const activeTag = document.activeElement?.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+                    return;
+                }
+                
+                // Only trigger if we are actively viewing the player screen
+                const playerScreen = document.getElementById('screen-player');
+                if (playerScreen && playerScreen.classList.contains('active')) {
+                    e.preventDefault(); // Prevent scrolling or clicking other focused buttons
+                    this.togglePlayback();
+                }
+            }
+        });
     }
 }
