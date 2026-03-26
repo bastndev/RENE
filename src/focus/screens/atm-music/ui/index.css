@@ -173,9 +173,50 @@
     width: 42px;
     height: 42px;
     border-radius: 6px;
-    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
     flex-shrink: 0;
-    background: rgba(128, 128, 128, 0.1);
+    background-image: var(--thumbnail-image), var(--fallback-gradient, linear-gradient(135deg, #3256ff 0%, #25c3b5 55%, #ffc85b 100%));
+    background-size: cover, 150% 150%;
+    background-position: center, center;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    animation: bannerShift 8s ease-in-out infinite;
+}
+
+.result-thumbnail::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.18));
+    pointer-events: none;
+}
+
+.result-thumbnail-initial {
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.result-thumbnail.has-image .result-thumbnail-initial {
+    opacity: 0;
+}
+
+@keyframes bannerShift {
+    0% {
+        background-position: center, 0% 0%;
+    }
+    50% {
+        background-position: center, 100% 100%;
+    }
+    100% {
+        background-position: center, 0% 0%;
+    }
 }
 
 .result-info {

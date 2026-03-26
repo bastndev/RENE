@@ -1,5 +1,6 @@
 import { $, escapeHtml, formatDuration } from '../../../../shared/utils';
 import { Track } from '../../../../shared/types';
+import { buildGradientBanner } from '../../../../shared/ui-ux/gradient-banner';
 
 export class MusicResultsUI {
     private container: HTMLElement | null = null;
@@ -57,16 +58,35 @@ export class MusicResultsUI {
         items.forEach((item, i) => {
             const el = document.createElement('div');
             el.className = 'result-item';
-            el.innerHTML = `
-                <img class="result-thumbnail" src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy"
-                    onerror="this.style.background='rgba(128,128,128,0.15)';this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22/>'">
-                <div class="result-info">
-                    <div class="result-title">${escapeHtml(item.title)}</div>
-                    <div class="result-meta">
-                        ${escapeHtml(item.artist)}${item.album ? ` · ${escapeHtml(item.album)}` : ''} · ${formatDuration(item.duration)}
-                    </div>
+
+            const thumb = document.createElement('div');
+            thumb.className = 'result-thumbnail';
+
+            const fallback = buildGradientBanner(`${item.id}|${item.title}|${item.artist}`, i);
+            thumb.style.setProperty('--fallback-gradient', fallback);
+
+            const hasThumbnail = Boolean(item.thumbnail && item.thumbnail.trim());
+            thumb.classList.toggle('has-image', hasThumbnail);
+            if (hasThumbnail) {
+                thumb.style.setProperty('--thumbnail-image', `url(${item.thumbnail.trim()})`);
+            }
+
+            const initial = document.createElement('span');
+            initial.className = 'result-thumbnail-initial';
+            initial.textContent = (item.title || item.artist || 'M').trim().charAt(0).toUpperCase();
+            thumb.appendChild(initial);
+
+            const info = document.createElement('div');
+            info.className = 'result-info';
+            info.innerHTML = `
+                <div class="result-title">${escapeHtml(item.title)}</div>
+                <div class="result-meta">
+                    ${escapeHtml(item.artist)}${item.album ? ` · ${escapeHtml(item.album)}` : ''} · ${formatDuration(item.duration)}
                 </div>
             `;
+
+            el.appendChild(thumb);
+            el.appendChild(info);
             el.addEventListener('click', () => this.onSelect(i));
             this.container?.appendChild(el);
         });
