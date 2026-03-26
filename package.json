@@ -87,6 +87,6 @@
     "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
-    "ytmusic-api": "^5.3.1"
+    "NeteaseCloudMusicApi": "^4.30.0"
   }
 }

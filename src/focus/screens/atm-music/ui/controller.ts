@@ -16,8 +16,10 @@ export class AtmMusicController {
     private tracks: Track[] = [];
     private currentIndex = -1;
     private hasCachedSearch = false;
+    private musicLabelEl: HTMLElement | null = null;
 
     constructor(private readonly vscode: VSCodeApi) {
+        this.musicLabelEl = $('#qa-music-label');
         this.mountBaseHtml();
         
         this.searchUI = new MusicSearchUI(
@@ -40,6 +42,7 @@ export class AtmMusicController {
         );
 
         this.bindGlobalMessages();
+        this.updateMusicLabelState();
     }
 
     private mountBaseHtml() {
@@ -70,15 +73,21 @@ export class AtmMusicController {
     private bindGlobalMessages() {
         window.addEventListener('message', (event: MessageEvent) => {
             const msg = event.data as WebviewMessage;
-            if (msg.type === 'searchResults') {
+            if (msg.type === 'config' && msg.streamPort) {
+                (window as any).STREAM_PORT = msg.streamPort;
+            } else if (msg.type === 'searchResults') {
                 this.tracks = msg.results || [];
                 this.hasCachedSearch = true;
                 this.resultsUI.render(this.tracks);
                 this.searchUI.setCanForward(true);
+                this.updateMusicLabelState();
             } else if (msg.type === 'error') {
                 this.showError(msg.message || 'Unknown error');
             }
         });
+
+        // Notify Extension to start the background audio stream server
+        this.vscode.postMessage({ type: 'ready' } as WebviewMessage);
     }
 
     private performSearch(query: string) {
@@ -89,6 +98,7 @@ export class AtmMusicController {
         this.resultsUI.setQuery(query);
         this.resultsUI.showSkeleton();
         this.showScreen('results');
+        this.updateMusicLabelState();
         this.vscode.postMessage({ type: 'search', query });
     }
 
@@ -98,6 +108,7 @@ export class AtmMusicController {
         if (track) {
             this.showScreen('player');
             this.playerUI.playTrack(track, index > 0, index < this.tracks.length - 1);
+            this.updateMusicLabelState();
         }
     }
 
@@ -172,4 +183,20 @@ export class AtmMusicController {
 
     // Public API for external integration
     public search(query: string) { this.searchUI.setQuery(query); this.performSearch(query); }
+
+    /** Navigate to player (if a track is loaded) or results (if a search was made). */
+    public goToMusic() {
+        if (this.currentIndex > -1) {
+            this.showScreen('player');
+        } else if (this.hasCachedSearch) {
+            this.showScreen('results');
+        }
+        // else: already on search screen, nothing to do
+    }
+
+    private updateMusicLabelState() {
+        if (!this.musicLabelEl) return;
+        const canGo = (this.currentIndex > -1 || this.hasCachedSearch);
+        this.musicLabelEl.classList.toggle('is-linkable', canGo);
+    }
 }

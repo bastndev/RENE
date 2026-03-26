@@ -3,7 +3,7 @@
  * Unified interfaces for the entire extension and webview.
  */
 
-export type MusicProvider = 'youtube' | 'deezer' | 'lastfm';
+export type MusicProvider = 'youtube' | 'deezer' | 'lastfm' | 'netease';
 
 export interface Track {
     id: string;
@@ -23,11 +23,14 @@ export type WebviewMessageType =
     | 'search' 
     | 'searchResults' 
     | 'error' 
-    | 'info';
+    | 'info'
+    | 'ready'
+    | 'config';
 
 export interface WebviewMessage {
     type: WebviewMessageType;
     query?: string;
     results?: Track[];
     message?: string;
+    streamPort?: number;
 }

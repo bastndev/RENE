@@ -1,13 +1,16 @@
-.play-btn.loading {
+.play-btn.loading,
+#qa-play-btn.loading {
 	position: relative;
 	pointer-events: none;
 }
 
-.play-btn.loading svg {
+.play-btn.loading svg,
+#qa-play-btn.loading svg {
 	opacity: 0;
 }
 
-.play-btn.loading::after {
+.play-btn.loading::after,
+#qa-play-btn.loading::after {
 	content: '';
 	position: absolute;
 	top: 50%;
@@ -26,7 +29,8 @@
 	animation: play-btn-skeleton-shimmer 1.5s linear infinite;
 }
 
-body.vscode-light .play-btn.loading::after {
+body.vscode-light .play-btn.loading::after,
+body.vscode-light #qa-play-btn.loading::after {
 	background: linear-gradient(
 		90deg,
 		rgba(0, 0, 0, 0.10) 25%,

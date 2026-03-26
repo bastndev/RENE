@@ -1,20 +1,17 @@
 import { $, escapeHtml, formatDuration } from '../../../../shared/utils';
 import { Track } from '../../../../shared/types';
 
-declare const YT: any;
-
 export class MusicPlayerUI {
     private container: HTMLElement | null = null;
     private trackInfo: HTMLElement | null = null;
-    private ytPlayer: any = null;
-    private deezerAudio: HTMLAudioElement | null = null;
+    private audioPlayer: HTMLAudioElement;
     private progressTimer: number | null = null;
     private isPlaying = false;
     private isMuted = false;
     private isLoopEnabled = false;
     private suppressPlaybackEvents = false;
-    private activeSource: 'none' | 'youtube' | 'deezer' = 'none';
-    private playerReady = false;
+    private isSeeking = false;
+    private isLoadingState = false;
     private pendingTrack: Track | null = null;
 
     constructor(
@@ -25,8 +22,11 @@ export class MusicPlayerUI {
     ) {
         this.container = $('#player-container');
         this.trackInfo = $('#player-track-info');
-        this.initializeYouTube();
+        this.audioPlayer = new Audio();
+        this.audioPlayer.crossOrigin = 'anonymous';
+        this.setupAudioEvents();
         this.setupBackEvents();
+        this.setupKeyboardEvents();
     }
 
     public isRunning(): boolean {
@@ -45,59 +45,54 @@ export class MusicPlayerUI {
         }
     }
 
-    /**
-     * Silently try to play a track without re-rendering the player UI.
-     * Used both for initial play and for fallback skipping.
-     */
+    private parseTrackStreamUrl(track: Track): string | null {
+        if (track.videoId) {
+            const port = (window as any).STREAM_PORT || 0;
+            if (port > 0) {
+                return `http://127.0.0.1:${port}/stream?videoId=${track.videoId}`;
+            }
+        } else if (track.preview) {
+            return track.preview;
+        }
+        return null;
+    }
+
     private attemptPlay(track: Track) {
         this.suppressPlaybackEvents = false;
 
         const qaBtn = $('#qa-play-btn');
         if (qaBtn) qaBtn.style.display = 'inline-flex';
 
-        if (track.videoId) {
-            if (!this.playerReady) {
-                // Wait for the player to be ready before playing
-                this.pendingTrack = track;
-                return;
-            }
-            this.activeSource = 'youtube';
-            this.ytPlayer.loadVideoById(track.videoId);
-            this.ytPlayer.playVideo();
-        } else if (track.preview) {
-            this.activeSource = 'deezer';
-            this.playDeezer(track.preview);
+        const url = this.parseTrackStreamUrl(track);
+        
+        if (url) {
+            this.audioPlayer.pause();
+            this.audioPlayer.src = url;
+            this.audioPlayer.load();
+            
+            this.audioPlayer.play().catch(e => {
+                console.warn('[RENE Music] Autoplay prevented or failed:', e);
+                this.setLoading(false);
+            });
         } else {
-            // This track can't play at all - trigger fallback
             this.onFallback();
         }
     }
 
-    /**
-     * Called by the controller when the current track fails.
-     * Updates the header text but does NOT re-render the player controls.
-     */
     public skipToTrack(track: Track, hasPrev: boolean, hasNext: boolean) {
         this.stopPlayback();
         this.updateTrackHeader(track);
 
-        // Update prev/next button states
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
-        if (prevBtn) {
-            prevBtn.classList.toggle('disabled', !hasPrev);
-        }
-        if (nextBtn) {
-            nextBtn.classList.toggle('disabled', !hasNext);
-        }
+        if (prevBtn) prevBtn.classList.toggle('disabled', !hasPrev);
+        if (nextBtn) nextBtn.classList.toggle('disabled', !hasNext);
 
-        // Update total time and reset progress bar
         const totalTime = $('#total-time');
-        if (totalTime) {
-            totalTime.textContent = formatDuration(track.duration);
-        }
-        const bar = $('#progress-bar') as HTMLInputElement | null;
-        if (bar) bar.value = '0';
+        if (totalTime) totalTime.textContent = formatDuration(track.duration);
+        
+        this.updateProgressVisual(0);
+        
         const curTime = $('#current-time');
         if (curTime) curTime.textContent = '0:00';
 
@@ -107,17 +102,11 @@ export class MusicPlayerUI {
 
     private stopPlayback(suppressEvents = false) {
         this.suppressPlaybackEvents = suppressEvents;
+        this.audioPlayer.pause();
+        this.audioPlayer.src = '';
+        this.audioPlayer.load();
 
-        if (this.activeSource === 'youtube' && this.ytPlayer) {
-            this.ytPlayer.stopVideo();
-        }
-        if (this.deezerAudio) {
-            this.deezerAudio.pause();
-            this.deezerAudio.src = '';
-            this.deezerAudio.load();
-        }
         this.isPlaying = false;
-        this.activeSource = 'none';
         this.pendingTrack = null;
         this.stopProgressLoop();
         this.setLoading(false);
@@ -127,114 +116,68 @@ export class MusicPlayerUI {
     }
 
     public pause() {
-        if (this.activeSource === 'youtube' && this.ytPlayer) this.ytPlayer.pauseVideo();
-        else if (this.activeSource === 'deezer' && this.deezerAudio) this.deezerAudio.pause();
+        this.audioPlayer.pause();
     }
 
     public stop() {
-        // Called when navigating back to Search: ignore delayed media callbacks.
         this.stopPlayback(true);
     }
 
-    private initializeYouTube() {
-        (window as any).onYouTubeIframeAPIReady = () => {
-            this.ytPlayer = new YT.Player('youtube-player', {
-                height: '360', width: '640', videoId: '',
-                playerVars: { playsinline: 1, controls: 0, disablekb: 1 },
-                events: {
-                    onReady: () => { 
-                        this.playerReady = true; 
-                        if (this.pendingTrack) {
-                            this.attemptPlay(this.pendingTrack);
-                            this.pendingTrack = null;
-                        }
-                    },
-                    onStateChange: (e: any) => this.onYTStateChange(e),
-                    onError: () => {
-                        if (this.suppressPlaybackEvents) {
-                            return;
-                        }
-                        this.onFallback();
-                    }
-                }
-            });
-        };
-    }
-
-    private onYTStateChange(event: any) {
-        if (this.suppressPlaybackEvents) {
-            return;
-        }
-
-        if (event.data === YT.PlayerState.PLAYING) {
+    private setupAudioEvents() {
+        this.audioPlayer.onplay = () => {
+            if (this.suppressPlaybackEvents) return;
             this.isPlaying = true;
-            this.setLoading(false);
-            this.updateIcons();
-            this.startProgressLoop();
-        } else if (event.data === YT.PlayerState.ENDED) {
-            if (this.isLoopEnabled) { this.ytPlayer.seekTo(0, true); this.ytPlayer.playVideo(); }
-            else this.onNext();
-        } else if (event.data === YT.PlayerState.PAUSED) {
-            this.isPlaying = false;
-            this.updateIcons();
-            this.stopProgressLoop();
-        }
-    }
-
-    private playDeezer(url: string) {
-        if (!this.deezerAudio) {
-            this.deezerAudio = new Audio();
-            this.deezerAudio.crossOrigin = 'anonymous';
-        } else {
-            this.deezerAudio.pause();
-            this.deezerAudio.removeAttribute('src');
-            this.deezerAudio.load();
-        }
-
-        this.deezerAudio.src = url;
-
-        this.deezerAudio.onplay = () => {
-            if (this.suppressPlaybackEvents) {
-                return;
-            }
-            this.isPlaying = true;
-            this.setLoading(false);
             this.updateIcons();
             this.startProgressLoop();
         };
 
-        this.deezerAudio.onpause = () => {
-            if (this.suppressPlaybackEvents) {
-                return;
+        this.audioPlayer.onplaying = () => {
+            if (this.suppressPlaybackEvents) return;
+            this.setLoading(false);
+        };
+
+        this.audioPlayer.onwaiting = () => {
+            if (this.suppressPlaybackEvents) return;
+            // Don't show loading spinner while user is actively seeking
+            if (!this.isSeeking) {
+                this.setLoading(true);
             }
+        };
+
+        this.audioPlayer.onpause = () => {
+            if (this.suppressPlaybackEvents) return;
+            // Don't stop playback state if the pause was caused by seeking
+            if (this.isSeeking) return;
             this.isPlaying = false;
             this.updateIcons();
             this.stopProgressLoop();
         };
 
-        this.deezerAudio.onended = () => {
-            if (this.suppressPlaybackEvents) {
-                return;
+        // When the browser finishes seeking to the new position
+        this.audioPlayer.onseeked = () => {
+            if (this.suppressPlaybackEvents) return;
+            this.isSeeking = false;
+            this.setLoading(false);
+            // Restart the progress loop to ensure UI keeps updating
+            if (this.isPlaying || !this.audioPlayer.paused) {
+                this.startProgressLoop();
             }
+        };
+
+        this.audioPlayer.onended = () => {
+            if (this.suppressPlaybackEvents) return;
             if (this.isLoopEnabled) {
-                this.deezerAudio?.play();
+                this.audioPlayer.play();
             } else {
                 this.onNext();
             }
         };
 
-        this.deezerAudio.onerror = () => {
-            if (this.suppressPlaybackEvents) {
-                return;
-            }
+        this.audioPlayer.onerror = () => {
+            if (this.suppressPlaybackEvents) return;
+            console.warn('[RENE Music] Audio element error');
             this.onFallback();
         };
-
-        // Try to auto-play immediately
-        this.deezerAudio.play().catch(() => {
-            // Browser blocked autoplay - user needs to click play
-            this.setLoading(false);
-        });
     }
 
     private render(track: Track, hasPrev: boolean, hasNext: boolean) {
@@ -242,9 +185,12 @@ export class MusicPlayerUI {
         this.container.innerHTML = `
             <div class="player-content">
                 <div class="player-progress">
-                    <span id="current-time">0:00</span>
-                    <input type="range" id="progress-bar" class="progress-bar" min="0" max="1000" value="0">
-                    <span id="total-time">${formatDuration(track.duration)}</span>
+                    <span id="current-time" class="progress-time" title="Click to toggle elapsed/remaining">0:00</span>
+                    <div id="progress-track" class="progress-track">
+                        <div id="progress-fill" class="progress-fill"></div>
+                        <div id="progress-thumb" class="progress-thumb"></div>
+                    </div>
+                    <span id="total-time" class="progress-time">0:00</span>
                 </div>
                 <div class="player-controls">
                     <button id="volume-btn" class="control-btn control-btn-sm ${this.isMuted ? 'active' : ''}" type="button" aria-pressed="${this.isMuted ? 'true' : 'false'}">
@@ -265,16 +211,12 @@ export class MusicPlayerUI {
         if (this.isLoopEnabled) {
             return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/><path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/><text x="12" y="16" font-size="10" font-weight="bold" text-anchor="middle" fill="currentColor" font-family="sans-serif">1</text></svg>';
         }
-
         return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7H17V10L21 6L17 2V5H5V11H7V7Z" fill="currentColor"/><path d="M17 17H7V14L3 18L7 22V19H19V13H17V17Z" fill="currentColor"/></svg>';
     }
 
     private refreshRepeatButton() {
         const repeatBtn = $('#repeat-btn');
-        if (!repeatBtn) {
-            return;
-        }
-
+        if (!repeatBtn) return;
         repeatBtn.classList.toggle('active', this.isLoopEnabled);
         repeatBtn.setAttribute('aria-pressed', this.isLoopEnabled ? 'true' : 'false');
         repeatBtn.innerHTML = this.getRepeatIconSvg();
@@ -286,18 +228,106 @@ export class MusicPlayerUI {
         $('#next-btn')?.addEventListener('click', () => this.onNext());
         $('#volume-btn')?.addEventListener('click', () => this.toggleMute());
         $('#repeat-btn')?.addEventListener('click', () => this.toggleLoop());
-        $('#progress-bar')?.addEventListener('input', (e: any) => this.seek(e.target.value));
+        
+        // Toggle time display mode (elapsed vs remaining)
+        $('#current-time')?.addEventListener('click', () => this.toggleTimeMode());
+        $('#total-time')?.addEventListener('click', () => this.toggleTimeMode());
+
+        this.setupProgressBarEvents();
+    }
+
+    private isRemainingMode = false;
+    private toggleTimeMode() {
+        this.isRemainingMode = !this.isRemainingMode;
+        this.updateTimeDisplay();
+    }
+
+    private updateTimeDisplay() {
+        const curEl = $('#current-time');
+        const totEl = $('#total-time');
+        if (!curEl || !totEl) return;
+
+        const cur = this.audioPlayer.currentTime || 0;
+        const dur = this.audioPlayer.duration || 0;
+
+        if (this.isRemainingMode && dur > 0) {
+            curEl.textContent = '-' + formatDuration(Math.max(0, Math.floor(dur - cur)));
+        } else {
+            curEl.textContent = formatDuration(Math.floor(cur));
+        }
+        
+        if (dur > 0) {
+            totEl.textContent = formatDuration(Math.floor(dur));
+        }
+    }
+
+    /** Custom progress bar drag/click handling — never disabled by loading states */
+    private setupProgressBarEvents() {
+        const track = $('#progress-track');
+        if (!track) return;
+
+        const seekToPosition = (clientX: number) => {
+            const rect = track.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            this.updateProgressVisual(ratio);
+            this.seek(String(ratio * 1000));
+        };
+
+        // Click to seek
+        track.addEventListener('mousedown', (e: MouseEvent) => {
+            if (this.isLoadingState) return;
+            this.isSeeking = true;
+            seekToPosition(e.clientX);
+            track.classList.add('is-dragging');
+
+            const onMove = (ev: MouseEvent) => seekToPosition(ev.clientX);
+            const onUp = () => {
+                this.isSeeking = false;
+                track.classList.remove('is-dragging');
+                if (this.audioPlayer.readyState < 3) {
+                    this.setLoading(true);
+                }
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+
+        // Touch support
+        track.addEventListener('touchstart', (e: TouchEvent) => {
+            if (this.isLoadingState) return;
+            this.isSeeking = true;
+            seekToPosition(e.touches[0].clientX);
+            track.classList.add('is-dragging');
+
+            const onMove = (ev: TouchEvent) => seekToPosition(ev.touches[0].clientX);
+            const onEnd = () => {
+                this.isSeeking = false;
+                track.classList.remove('is-dragging');
+                if (this.audioPlayer.readyState < 3) {
+                    this.setLoading(true);
+                }
+                document.removeEventListener('touchmove', onMove);
+                document.removeEventListener('touchend', onEnd);
+            };
+            document.addEventListener('touchmove', onMove, { passive: true });
+            document.addEventListener('touchend', onEnd);
+        }, { passive: true });
     }
 
     private togglePlayback() {
-        if (this.isPlaying) this.pause();
-        else { if (this.activeSource === 'youtube') this.ytPlayer.playVideo(); else this.deezerAudio?.play(); }
+        if (this.isPlaying) {
+            this.pause();
+        } else {
+            this.setLoading(true);
+            this.audioPlayer.play().catch(() => this.setLoading(false));
+        }
     }
 
     private toggleMute() {
         this.isMuted = !this.isMuted;
-        if (this.activeSource === 'youtube') this.isMuted ? this.ytPlayer.mute() : this.ytPlayer.unMute();
-        else if (this.deezerAudio) this.deezerAudio.muted = this.isMuted;
+        this.audioPlayer.muted = this.isMuted;
         this.updateIcons();
     }
 
@@ -308,20 +338,52 @@ export class MusicPlayerUI {
 
     private seek(value: string) {
         const val = Number(value) / 1000;
-        if (this.activeSource === 'youtube') this.ytPlayer.seekTo(val * this.ytPlayer.getDuration(), true);
-        else if (this.deezerAudio) this.deezerAudio.currentTime = val * this.deezerAudio.duration;
+
+        // Prefer the real audio duration; fall back to the visible total-time label
+        let dur = this.audioPlayer.duration;
+        if (!isFinite(dur) || !dur || dur < 1) {
+            const totalStr = $('#total-time')?.textContent || '0:00';
+            const [m, s] = totalStr.split(':').map(Number);
+            dur = (m * 60) + (s || 0);
+        }
+
+        if (this.audioPlayer && dur > 0) {
+            this.isSeeking = true;
+            this.audioPlayer.currentTime = val * dur;
+            // Update the timer display immediately so it feels responsive
+            const curEl = $('#current-time');
+            if (curEl) curEl.textContent = formatDuration(Math.floor(val * dur));
+        }
+    }
+
+    /** Update the visual fill + thumb position without touching the audio element */
+    private updateProgressVisual(ratio: number) {
+        const fill = $('#progress-fill');
+        const thumb = $('#progress-thumb');
+        const pct = Math.max(0, Math.min(100, ratio * 100));
+        if (fill) fill.style.width = `${pct}%`;
+        if (thumb) thumb.style.left = `${pct}%`;
     }
 
     private startProgressLoop() {
         this.stopProgressLoop();
         const update = () => {
-            if (!this.isPlaying || this.activeSource === 'none') return;
-            const cur = this.activeSource === 'deezer' ? this.deezerAudio?.currentTime : this.ytPlayer?.getCurrentTime();
-            const dur = this.activeSource === 'deezer' ? this.deezerAudio?.duration : this.ytPlayer?.getDuration();
-            if (cur !== undefined && dur) {
-                const bar = $('#progress-bar') as HTMLInputElement | null;
-                if (bar) bar.value = String((cur / dur) * 1000);
-                $('#current-time')!.textContent = formatDuration(Math.floor(cur));
+            if (!this.isPlaying && this.audioPlayer.paused) return;
+            const cur = this.audioPlayer.currentTime;
+            
+            const totalStr = $('#total-time')?.textContent || '1:00';
+            const [m, s] = totalStr.split(':').map(Number);
+            const totalSecs = m * 60 + (s || 0);
+
+            let dur = this.audioPlayer.duration;
+            if (!isFinite(dur)) {
+                dur = totalSecs > 0 ? totalSecs : 1; 
+            }
+
+            if (cur !== undefined && dur && !this.isSeeking) {
+                const ratio = cur / dur;
+                this.updateProgressVisual(ratio);
+                this.updateTimeDisplay();
             }
             this.progressTimer = requestAnimationFrame(update);
         };
@@ -331,10 +393,23 @@ export class MusicPlayerUI {
     private stopProgressLoop() { if (this.progressTimer) cancelAnimationFrame(this.progressTimer); }
 
     private setLoading(loading: boolean) {
+        this.isLoadingState = loading;
+        
         const btn = $('#play-pause-btn');
         if (btn) {
             btn.classList.toggle('loading', loading);
             (btn as HTMLButtonElement).disabled = loading;
+        }
+
+        const qaBtn = $('#qa-play-btn');
+        if (qaBtn) {
+            qaBtn.classList.toggle('loading', loading);
+            (qaBtn as HTMLButtonElement).disabled = loading;
+        }
+
+        const track = $('#progress-track');
+        if (track) {
+            track.classList.toggle('loading', loading);
         }
     }
 
@@ -368,10 +443,29 @@ export class MusicPlayerUI {
             $('#qa-play-btn')?.addEventListener('click', (e: Event) => {
                 e.stopPropagation();
                 e.preventDefault();
-                if (this.activeSource !== 'none' || this.pendingTrack) {
+                if (this.audioPlayer.src) {
                     this.togglePlayback();
                 }
             });
         }
+    }
+
+    private setupKeyboardEvents() {
+        document.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                // Do not trigger if user is typing in an input or textarea
+                const activeTag = document.activeElement?.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+                    return;
+                }
+                
+                // Only trigger if we are actively viewing the player screen
+                const playerScreen = document.getElementById('screen-player');
+                if (playerScreen && playerScreen.classList.contains('active')) {
+                    e.preventDefault(); // Prevent scrolling or clicking other focused buttons
+                    this.togglePlayback();
+                }
+            }
+        });
     }
 }

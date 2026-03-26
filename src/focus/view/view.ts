@@ -41,11 +41,11 @@ export class YouTubeMusicViewProvider implements vscode.WebviewViewProvider {
 
 		const csp = [
 			`default-src 'none'`,
+			`connect-src http://127.0.0.1:*`,
 			`style-src ${webview.cspSource} 'unsafe-inline'`,
-			`script-src ${webview.cspSource} https://www.youtube.com https://s.ytimg.com`,
+			`script-src ${webview.cspSource}`,
 			`img-src ${webview.cspSource} https://*.ytimg.com https://*.googleusercontent.com https://*.dzcdn.net https://*.fastly.net data:`,
-			`media-src ${webview.cspSource} https://*.dzcdn.net blob: data:`,
-			`frame-src https://www.youtube.com https://www.youtube-nocookie.com`,
+			`media-src ${webview.cspSource} https://*.dzcdn.net http://127.0.0.1:* blob: data:`,
 			`font-src ${webview.cspSource}`,
 		].join('; ');
 

@@ -71,6 +71,15 @@ import { gameScreenContent } from '../../screens/atm-game/game';
         });
     });
 
+    // "Music" label click → go to player/results if a track/search is active
+    const musicLabel = document.querySelector('#qa-music-label') as HTMLElement | null;
+    if (musicLabel) {
+        musicLabel.addEventListener('click', (e) => {
+            e.stopPropagation(); // don't bubble to the outer qa-btn
+            musicController.goToMusic();
+        });
+    }
+
     // Search input Enter key -> delegates to music controller
     // NOTE: MusicSearchUI already handles Enter key internally,
     // but this catches it for the main search screen too
