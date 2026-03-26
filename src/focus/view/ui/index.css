@@ -220,9 +220,14 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
 #qa-music-label {
     border-radius: 3px;
     transition: opacity 0.15s ease;
+    cursor: default;
 }
 
-#qa-music-label:hover {
+#qa-music-label.is-linkable {
+    cursor: pointer;
+}
+
+#qa-music-label.is-linkable:hover {
     opacity: 0.75;
 }
 

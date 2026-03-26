@@ -16,8 +16,10 @@ export class AtmMusicController {
     private tracks: Track[] = [];
     private currentIndex = -1;
     private hasCachedSearch = false;
+    private musicLabelEl: HTMLElement | null = null;
 
     constructor(private readonly vscode: VSCodeApi) {
+        this.musicLabelEl = $('#qa-music-label');
         this.mountBaseHtml();
         
         this.searchUI = new MusicSearchUI(
@@ -40,6 +42,7 @@ export class AtmMusicController {
         );
 
         this.bindGlobalMessages();
+        this.updateMusicLabelState();
     }
 
     private mountBaseHtml() {
@@ -77,6 +80,7 @@ export class AtmMusicController {
                 this.hasCachedSearch = true;
                 this.resultsUI.render(this.tracks);
                 this.searchUI.setCanForward(true);
+                this.updateMusicLabelState();
             } else if (msg.type === 'error') {
                 this.showError(msg.message || 'Unknown error');
             }
@@ -94,6 +98,7 @@ export class AtmMusicController {
         this.resultsUI.setQuery(query);
         this.resultsUI.showSkeleton();
         this.showScreen('results');
+        this.updateMusicLabelState();
         this.vscode.postMessage({ type: 'search', query });
     }
 
@@ -103,6 +108,7 @@ export class AtmMusicController {
         if (track) {
             this.showScreen('player');
             this.playerUI.playTrack(track, index > 0, index < this.tracks.length - 1);
+            this.updateMusicLabelState();
         }
     }
 
@@ -186,5 +192,11 @@ export class AtmMusicController {
             this.showScreen('results');
         }
         // else: already on search screen, nothing to do
+    }
+
+    private updateMusicLabelState() {
+        if (!this.musicLabelEl) return;
+        const canGo = (this.currentIndex > -1 || this.hasCachedSearch);
+        this.musicLabelEl.classList.toggle('is-linkable', canGo);
     }
 }
