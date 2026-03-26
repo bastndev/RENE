@@ -49,7 +49,7 @@ export class MusicPlayerUI {
         if (track.videoId) {
             const port = (window as any).STREAM_PORT || 0;
             if (port > 0) {
-                return `http://127.0.0.1:${port}/stream?videoId=${track.videoId}`;
+                return `http://127.0.0.1:${port}/stream?videoId=${track.videoId}&provider=${track.provider}`;
             }
         } else if (track.preview) {
             return track.preview;

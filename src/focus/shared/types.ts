@@ -3,19 +3,23 @@
  * Unified interfaces for the entire extension and webview.
  */
 
-export type MusicProvider = 'youtube' | 'deezer' | 'lastfm' | 'netease';
+export type MusicProvider = 'netease' | 'jamendo' | 'jiosaavn' | 'yandex' | 'deezer';
 
 export interface Track {
     id: string;
-    videoId?: string;
+    videoId: string;
     title: string;
     artist: string;
     album: string;
     thumbnail: string;
     duration: number;
-    preview?: string;
+    preview: string;
     provider: MusicProvider;
     canPlay: boolean;
+    region?: string;
+    quality?: string;
+    externalUrl?: string;
+    isFullTrack?: boolean;
 }
 
 // Message types for Webview <-> Extension communication

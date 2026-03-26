@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as https from 'https';
-import { song_url } from 'NeteaseCloudMusicApi';
 import { searchMusic } from './api';
 import { WebviewMessage } from '../../../shared/types';
+import { providerManager } from './providers/provider-manager';
 
 let streamServer: http.Server | null = null;
 let streamPort = 0;
@@ -16,6 +16,7 @@ export function startAudioServer(): Promise<number> {
             const url = new URL(req.url || '', `http://${req.headers.host || '127.0.0.1'}`);
             if (url.pathname === '/stream') {
                 const videoId = url.searchParams.get('videoId');
+                const provider = url.searchParams.get('provider') || 'netease';
                 if (!videoId) {
                     res.writeHead(400);
                     return res.end('Missing videoId');
@@ -31,9 +32,8 @@ export function startAudioServer(): Promise<number> {
                     return res.end();
                 }
 
-                // Get true authorized streaming URL from Netease
-                const urlResult = await song_url({ id: videoId, br: 320000 });
-                const realUrl = (urlResult.body as any).data?.[0]?.url;
+                // Get true authorized streaming URL
+                const realUrl = await providerManager.getStreamUrl(provider, videoId);
 
                 if (!realUrl) {
                     res.writeHead(404);
@@ -43,9 +43,13 @@ export function startAudioServer(): Promise<number> {
                 // Forward the Range header so seeking works (206 Partial Content)
                 const upstreamHeaders: Record<string, string> = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Referer': 'https://music.163.com/',
-                    'Cookie': 'os=pc; osver=Microsoft-Windows-10-Professional-build-19041-64bit; appver=2.9.0;'
                 };
+                
+                if (provider === 'netease') {
+                    upstreamHeaders['Referer'] = 'https://music.163.com/';
+                    upstreamHeaders['Cookie'] = 'os=pc; osver=Microsoft-Windows-10-Professional-build-19041-64bit; appver=2.9.0;';
+                }
+
                 if (req.headers.range) {
                     upstreamHeaders['Range'] = req.headers.range;
                 }
@@ -63,6 +67,12 @@ export function startAudioServer(): Promise<number> {
                     }
                     if (streamRes.headers['content-range']) {
                         outHeaders['Content-Range'] = streamRes.headers['content-range'];
+                    }
+
+                    // Handle redirects
+                    if (streamRes.statusCode && streamRes.statusCode >= 300 && streamRes.statusCode < 400 && streamRes.headers.location) {
+                        res.writeHead(streamRes.statusCode, { 'Location': streamRes.headers.location });
+                        return res.end();
                     }
 
                     res.writeHead(streamRes.statusCode || 200, outHeaders);
@@ -93,7 +103,7 @@ export function startAudioServer(): Promise<number> {
             const addr = streamServer?.address();
             if (addr && typeof addr !== 'string') {
                 streamPort = addr.port;
-                console.log(`[RENE Music] NetEase Proxy running on port ${streamPort}`);
+                console.log(`[RENE Music] Music Proxy running on port ${streamPort}`);
                 resolve(streamPort);
             } else {
                 resolve(0);

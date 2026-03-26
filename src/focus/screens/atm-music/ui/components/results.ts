@@ -76,12 +76,25 @@ export class MusicResultsUI {
             initial.textContent = (item.title || item.artist || 'M').trim().charAt(0).toUpperCase();
             thumb.appendChild(initial);
 
+            let providerName = item.provider.charAt(0).toUpperCase() + item.provider.slice(1);
+            if (item.provider === 'netease') providerName = 'NetEase';
+            if (item.provider === 'jiosaavn') providerName = 'JioSaavn';
+            
+            const qualityBadge = item.quality ? `<span class="result-badge quality">${item.quality}</span>` : '';
+            const typeBadge = item.isFullTrack ? '<span class="result-badge full">Full</span>' : '<span class="result-badge preview">30s Preview</span>';
+            const providerBadge = `<span class="result-badge provider-${item.provider.replace('_', '-')}">${providerName}</span>`;
+
             const info = document.createElement('div');
             info.className = 'result-info';
             info.innerHTML = `
                 <div class="result-title">${escapeHtml(item.title)}</div>
                 <div class="result-meta">
                     ${escapeHtml(item.artist)}${item.album ? ` · ${escapeHtml(item.album)}` : ''} · ${formatDuration(item.duration)}
+                </div>
+                <div class="result-badges">
+                    ${providerBadge}
+                    ${qualityBadge}
+                    ${typeBadge}
                 </div>
             `;
 
