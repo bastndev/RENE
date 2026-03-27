@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import { YouTubeMusicViewProvider } from './focus/focus';
+import { stopAudioServer } from './focus/screens/atm-music/core/handler';
 
 export function activate(context: vscode.ExtensionContext) {
-
-	console.log('Congratulations, your extension "rene" is now active!');
-
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(
 			'rene-yt-music-view',
@@ -14,5 +12,6 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 }
 
-// On deactivate
-export function deactivate() { }
+export function deactivate() {
+	stopAudioServer();
+}

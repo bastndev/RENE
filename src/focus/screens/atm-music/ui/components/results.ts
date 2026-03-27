@@ -2,6 +2,20 @@ import { $, escapeHtml, formatDuration } from '../../../../shared/utils';
 import { Track } from '../../../../shared/types';
 import { buildGradientBanner } from '../../../../shared/ui-ux/gradient-banner';
 
+/**
+ * Validates that a thumbnail is a safe HTTPS image URL.
+ * Prevents XSS via CSS url() injection.
+ */
+function isSafeImageUrl(url: string): boolean {
+    if (!url || typeof url !== 'string') return false;
+    try {
+        const parsed = new URL(url.trim());
+        return parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 export class MusicResultsUI {
     private container: HTMLElement | null = null;
     private queryInput: HTMLInputElement | null = null;
@@ -65,7 +79,7 @@ export class MusicResultsUI {
             const fallback = buildGradientBanner(`${item.id}|${item.title}|${item.artist}`, i);
             thumb.style.setProperty('--fallback-gradient', fallback);
 
-            const hasThumbnail = Boolean(item.thumbnail && item.thumbnail.trim());
+            const hasThumbnail = isSafeImageUrl(item.thumbnail);
             thumb.classList.toggle('has-image', hasThumbnail);
             if (hasThumbnail) {
                 thumb.style.setProperty('--thumbnail-image', `url(${item.thumbnail.trim()})`);

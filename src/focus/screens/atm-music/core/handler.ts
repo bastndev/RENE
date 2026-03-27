@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as https from 'https';
-import { searchMusic } from './api';
 import { WebviewMessage } from '../../../shared/types';
 import { providerManager } from './providers/provider-manager';
 
@@ -127,9 +126,22 @@ export async function handleWebviewMessage(
     }
 }
 
+/**
+ * Closes the audio proxy server. Call this from extension deactivate().
+ */
+export function stopAudioServer(): void {
+    if (streamServer) {
+        streamServer.close(() => {
+            console.log('[RENE Music] Audio proxy server stopped.');
+        });
+        streamServer = null;
+        streamPort = 0;
+    }
+}
+
 async function handleSearch(webviewView: vscode.WebviewView, query: string) {
     try {
-        const results = await searchMusic(query);
+        const results = await providerManager.searchAll(query);
         webviewView.webview.postMessage({ 
             type: 'searchResults', 
             results 

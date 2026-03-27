@@ -124,8 +124,11 @@ export class JioSaavnProvider implements IMusicProvider {
         }
     }
 
-    private httpGet(url: string): Promise<string> {
+    private httpGet(url: string, redirectsLeft = 5): Promise<string> {
         return new Promise((resolve, reject) => {
+            if (redirectsLeft <= 0) {
+                return reject(new Error('[RENE Music] [JioSaavn] Too many redirects'));
+            }
             const protocol = url.startsWith('https') ? https : http;
             protocol.get(url, (res: any) => {
                 if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -133,7 +136,7 @@ export class JioSaavnProvider implements IMusicProvider {
                     const location = res.headers.location.startsWith('/') 
                         ? new URL(res.headers.location, url).toString() 
                         : res.headers.location;
-                    return this.httpGet(location).then(resolve, reject);
+                    return this.httpGet(location, redirectsLeft - 1).then(resolve, reject);
                 }
 
                 let data = '';
