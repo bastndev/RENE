@@ -13,7 +13,7 @@ export const timeScreenContent = `
 		</svg>
 		Back
 	</button>
-	Hello Time
+	🛠️ Working...
 </div>
 `;
 

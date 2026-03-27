@@ -13,7 +13,7 @@ export const gameScreenContent = `
 		</svg>
 		Back
 	</button>
-	Hello Gamer
+	🛠️ Working...
 </div>
 `;
 
