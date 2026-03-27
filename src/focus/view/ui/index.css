@@ -249,3 +249,73 @@ body.vscode-light .results-query-input::-webkit-search-cancel-button {
     align-items: center;
     justify-content: center;
 }
+
+/* ── Coming Soon Screens ── */
+.coming-soon-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 20px;
+    background: radial-gradient(circle at center, rgba(var(--vscode-focusBorder-rgb, 0, 120, 212), 0.05) 0%, transparent 70%);
+}
+
+.coming-soon-card {
+    background: color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 32px 24px;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    animation: cardFloatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes cardFloatIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.coming-soon-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--vscode-focusBorder) 0%, color-mix(in srgb, var(--vscode-focusBorder) 60%, white) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 8px 20px -6px var(--vscode-focusBorder);
+}
+
+.coming-soon-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: var(--vscode-editor-foreground);
+    letter-spacing: -0.5px;
+}
+
+.coming-soon-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--vscode-descriptionForeground);
+    margin: 0 0 24px;
+}
+
+.coming-soon-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 4px 12px;
+    background: rgba(var(--vscode-focusBorder-rgb, 0, 120, 212), 0.15);
+    color: var(--vscode-focusBorder);
+    border-radius: 50px;
+    text-transform: uppercase;
+}

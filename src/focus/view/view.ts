@@ -30,8 +30,6 @@ export class YouTubeMusicViewProvider implements vscode.WebviewViewProvider {
 	private _getHtmlForWebview(webview: vscode.Webview) {
 		// Asset paths
 		const styles = [
-			['src', 'focus', 'shared', 'skeletons', 's-music', 'list.css'],
-			['src', 'focus', 'shared', 'skeletons', 's-music', 'play.css'],
 			['src', 'focus', 'view', 'ui', 'index.css'],
 			['src', 'focus', 'screens', 'atm-music', 'ui', 'index.css'],
 		];

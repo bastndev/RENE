@@ -10,6 +10,21 @@ interface NeteaseSong {
     dt?: number;
 }
 
+interface NeteaseCloudSearchResponse {
+    code: number;
+    result?: {
+        songs?: NeteaseSong[];
+    };
+}
+
+interface NeteaseSongUrlResponse {
+    code: number;
+    data: {
+        id: number;
+        url: string;
+    }[];
+}
+
 export class NeteaseProvider implements IMusicProvider {
     readonly name = 'netease';
 
@@ -18,8 +33,6 @@ export class NeteaseProvider implements IMusicProvider {
     }
 
     async search(query: string, limit = 30): Promise<Track[]> {
-
-
         try {
             const result = await cloudsearch({
                 keywords: query,
@@ -28,7 +41,7 @@ export class NeteaseProvider implements IMusicProvider {
                 offset: 0
             });
 
-            const data = result.body as any;
+            const data = result.body as unknown as NeteaseCloudSearchResponse;
             if (data.code !== 200 || !data.result?.songs) {
                 return [];
             }
@@ -37,7 +50,7 @@ export class NeteaseProvider implements IMusicProvider {
             const ids = songs.map(s => String(s.id)).join(',');
 
             const urlResult = await song_url({ id: ids, br: 320000 });
-            const urls = (urlResult.body as any).data as any[];
+            const urls = (urlResult.body as unknown as NeteaseSongUrlResponse).data;
 
             const urlMap = new Map<number, string>();
             urls.forEach(u => {

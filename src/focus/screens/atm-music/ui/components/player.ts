@@ -436,17 +436,13 @@ export class MusicPlayerUI {
     private setupBackEvents() {
         $('#back-to-results')?.addEventListener('click', () => this.onBack());
         
-        const qaBtn = $('#qa-play-btn');
-        if (qaBtn) {
-            qaBtn.replaceWith(qaBtn.cloneNode(true));
-            $('#qa-play-btn')?.addEventListener('click', (e: Event) => {
-                e.stopPropagation();
-                e.preventDefault();
-                if (this.audioPlayer.src) {
-                    this.togglePlayback();
-                }
-            });
-        }
+        $('#qa-play-btn')?.addEventListener('click', (e: Event) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (this.audioPlayer.src) {
+                this.togglePlayback();
+            }
+        });
     }
 
     private setupKeyboardEvents() {
