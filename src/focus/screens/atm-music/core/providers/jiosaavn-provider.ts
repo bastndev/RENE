@@ -52,7 +52,7 @@ export class JioSaavnProvider implements IMusicProvider {
     async search(query: string, limit = 20): Promise<Track[]> {
         if (!this.isAvailable()) return [];
 
-        console.log(`[RENE Music] [JioSaavn] Searching: "${query}"`);
+
 
         try {
             const encodedQuery = encodeURIComponent(query);
@@ -98,7 +98,7 @@ export class JioSaavnProvider implements IMusicProvider {
                 };
             }).filter(t => t.canPlay);
         } catch (error) {
-            console.error('[RENE Music] [JioSaavn] Search failed:', error);
+
             return [];
         }
     }

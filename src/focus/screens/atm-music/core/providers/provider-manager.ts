@@ -10,6 +10,10 @@ import { JioSaavnProvider } from './jiosaavn-provider';
 export class ProviderManager {
     private providers: IMusicProvider[] = [];
 
+    /** Search cache: query → { results, timestamp } */
+    private static readonly CACHE_TTL_MS = 60_000; // 60 seconds
+    private searchCache = new Map<string, { results: Track[]; timestamp: number }>();
+
     constructor() {
         this.initializeProviders();
     }
@@ -26,8 +30,6 @@ export class ProviderManager {
 
         // Filter and log
         this.providers = this.providers.filter(p => p.isAvailable());
-        const names = this.providers.map(p => p.name).join(', ');
-        console.log(`[RENE Music] Initialized providers: ${names}`);
     }
 
     /**
@@ -46,11 +48,19 @@ export class ProviderManager {
 
     /**
      * Search all providers concurrently.
+     * Returns cached results if the same query was made within the last 60 seconds.
      * Netease results are guaranteed to appear first; other providers
      * fill in if Netease has gaps or doesn't return enough results.
      */
     async searchAll(query: string): Promise<Track[]> {
         if (!query || this.providers.length === 0) return [];
+
+        // Check cache first
+        const cacheKey = query.trim().toLowerCase();
+        const cached = this.searchCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < ProviderManager.CACHE_TTL_MS) {
+            return cached.results;
+        }
 
         // Search all providers concurrently (Netease is always index 0)
         const results = await Promise.allSettled(
@@ -74,7 +84,22 @@ export class ProviderManager {
 
         // Netease first, then the rest — dedup will handle overlaps
         const merged = [...neteaseResults, ...otherResults];
-        return this.deduplicateAndSort(merged, query);
+        const final = this.deduplicateAndSort(merged, query);
+
+        // Store in cache
+        this.searchCache.set(cacheKey, { results: final, timestamp: Date.now() });
+
+        // Evict stale entries to prevent unbounded memory growth
+        if (this.searchCache.size > 50) {
+            const now = Date.now();
+            for (const [key, entry] of this.searchCache) {
+                if (now - entry.timestamp > ProviderManager.CACHE_TTL_MS) {
+                    this.searchCache.delete(key);
+                }
+            }
+        }
+
+        return final;
     }
 
     /**

@@ -21,7 +21,10 @@ export function startAudioServer(): Promise<number> {
                     return res.end('Missing videoId');
                 }
 
-                res.setHeader('Access-Control-Allow-Origin', '*');
+                // Restrict CORS to VS Code webview origins only
+                const origin = req.headers.origin || '';
+                const allowedOrigin = origin.startsWith('vscode-webview://') ? origin : 'null';
+                res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
 
                 // Handle CORS preflight
                 if (req.method === 'OPTIONS') {

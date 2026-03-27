@@ -42,7 +42,7 @@ export class DeezerProvider implements IMusicProvider {
     }
 
     async search(query: string, limit = 20): Promise<Track[]> {
-        console.log(`[RENE Music] [Deezer] Searching: "${query}"`);
+
 
         try {
             const encodedQuery = encodeURIComponent(query);
@@ -74,8 +74,7 @@ export class DeezerProvider implements IMusicProvider {
                     quality: '128k',
                 }));
 
-        } catch (error) {
-            console.error('[RENE Music] [Deezer] Search failed:', error);
+        } catch {
             return [];
         }
     }

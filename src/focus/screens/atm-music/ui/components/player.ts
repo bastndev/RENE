@@ -13,6 +13,7 @@ export class MusicPlayerUI {
     private isSeeking = false;
     private isLoadingState = false;
     private pendingTrack: Track | null = null;
+    private currentTrackDuration = 0;
 
     constructor(
         private readonly onNext: () => void,
@@ -82,6 +83,7 @@ export class MusicPlayerUI {
     public skipToTrack(track: Track, hasPrev: boolean, hasNext: boolean) {
         this.stopPlayback();
         this.updateTrackHeader(track);
+        this.currentTrackDuration = track.duration || 0;
 
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
@@ -339,12 +341,10 @@ export class MusicPlayerUI {
     private seek(value: string) {
         const val = Number(value) / 1000;
 
-        // Prefer the real audio duration; fall back to the visible total-time label
+        // Prefer the real audio duration; fall back to stored track duration
         let dur = this.audioPlayer.duration;
         if (!isFinite(dur) || !dur || dur < 1) {
-            const totalStr = $('#total-time')?.textContent || '0:00';
-            const [m, s] = totalStr.split(':').map(Number);
-            dur = (m * 60) + (s || 0);
+            dur = this.currentTrackDuration > 0 ? this.currentTrackDuration : 0;
         }
 
         if (this.audioPlayer && dur > 0) {
@@ -370,14 +370,13 @@ export class MusicPlayerUI {
         const update = () => {
             if (!this.isPlaying && this.audioPlayer.paused) return;
             const cur = this.audioPlayer.currentTime;
-            
-            const totalStr = $('#total-time')?.textContent || '1:00';
-            const [m, s] = totalStr.split(':').map(Number);
-            const totalSecs = m * 60 + (s || 0);
 
             let dur = this.audioPlayer.duration;
             if (!isFinite(dur)) {
-                dur = totalSecs > 0 ? totalSecs : 1; 
+                dur = this.currentTrackDuration > 0 ? this.currentTrackDuration : 1;
+            } else if (dur > 0 && this.currentTrackDuration !== dur) {
+                // Sync stored duration with the real one when it becomes available
+                this.currentTrackDuration = dur;
             }
 
             if (cur !== undefined && dur && !this.isSeeking) {

@@ -18,7 +18,7 @@ export class NeteaseProvider implements IMusicProvider {
     }
 
     async search(query: string, limit = 30): Promise<Track[]> {
-        console.log(`[RENE Music] [Netease] Searching: "${query}"`);
+
 
         try {
             const result = await cloudsearch({
@@ -73,7 +73,7 @@ export class NeteaseProvider implements IMusicProvider {
 
             return validTracks;
         } catch (error) {
-            console.error('[RENE Music] [Netease] Search failed:', error);
+
             return [];
         }
     }
