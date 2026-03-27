@@ -50,7 +50,7 @@ export class JioSaavnProvider implements IMusicProvider {
     }
 
     async search(query: string, limit = 20): Promise<Track[]> {
-        if (!this.isAvailable()) return [];
+        if (!this.isAvailable()) {return [];}
 
 
 
@@ -104,7 +104,7 @@ export class JioSaavnProvider implements IMusicProvider {
     }
 
     async getStreamUrl(trackId: string): Promise<string | null> {
-        if (!this.isAvailable()) return null;
+        if (!this.isAvailable()) {return null;}
 
         try {
             const url = `${this.apiUrl}/songs?id=${trackId}`;

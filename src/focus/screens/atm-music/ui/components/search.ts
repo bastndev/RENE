@@ -57,7 +57,7 @@ export class MusicSearchUI {
     }
 
     private updateState() {
-        if (!this.searchBtn) return;
+        if (!this.searchBtn) {return;}
 
         const currentQuery = this.getQuery();
         const isUnchanged = currentQuery === this.lastSearchQuery && currentQuery.length > 0;

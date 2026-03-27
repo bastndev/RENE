@@ -48,7 +48,7 @@ export class MusicPlayerUI {
 
     private parseTrackStreamUrl(track: Track): string | null {
         if (track.videoId) {
-            const port = (window as any).STREAM_PORT || 0;
+            const port = window.STREAM_PORT || 0;
             if (port > 0) {
                 return `http://127.0.0.1:${port}/stream?videoId=${track.videoId}&provider=${track.provider}`;
             }
@@ -62,7 +62,7 @@ export class MusicPlayerUI {
         this.suppressPlaybackEvents = false;
 
         const qaBtn = $('#qa-play-btn');
-        if (qaBtn) qaBtn.style.display = 'inline-flex';
+        if (qaBtn) {qaBtn.style.display = 'inline-flex';}
 
         const url = this.parseTrackStreamUrl(track);
         
@@ -87,16 +87,16 @@ export class MusicPlayerUI {
 
         const prevBtn = $('#prev-btn');
         const nextBtn = $('#next-btn');
-        if (prevBtn) prevBtn.classList.toggle('disabled', !hasPrev);
-        if (nextBtn) nextBtn.classList.toggle('disabled', !hasNext);
+        if (prevBtn) {prevBtn.classList.toggle('disabled', !hasPrev);}
+        if (nextBtn) {nextBtn.classList.toggle('disabled', !hasNext);}
 
         const totalTime = $('#total-time');
-        if (totalTime) totalTime.textContent = formatDuration(track.duration);
+        if (totalTime) {totalTime.textContent = formatDuration(track.duration);}
         
         this.updateProgressVisual(0);
         
         const curTime = $('#current-time');
-        if (curTime) curTime.textContent = '0:00';
+        if (curTime) {curTime.textContent = '0:00';}
 
         this.setLoading(true);
         this.attemptPlay(track);
@@ -114,7 +114,7 @@ export class MusicPlayerUI {
         this.setLoading(false);
 
         const qaBtn = $('#qa-play-btn');
-        if (qaBtn) qaBtn.style.display = 'none';
+        if (qaBtn) {qaBtn.style.display = 'none';}
     }
 
     public pause() {
@@ -127,19 +127,19 @@ export class MusicPlayerUI {
 
     private setupAudioEvents() {
         this.audioPlayer.onplay = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             this.isPlaying = true;
             this.updateIcons();
             this.startProgressLoop();
         };
 
         this.audioPlayer.onplaying = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             this.setLoading(false);
         };
 
         this.audioPlayer.onwaiting = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             // Don't show loading spinner while user is actively seeking
             if (!this.isSeeking) {
                 this.setLoading(true);
@@ -147,9 +147,9 @@ export class MusicPlayerUI {
         };
 
         this.audioPlayer.onpause = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             // Don't stop playback state if the pause was caused by seeking
-            if (this.isSeeking) return;
+            if (this.isSeeking) {return;}
             this.isPlaying = false;
             this.updateIcons();
             this.stopProgressLoop();
@@ -157,7 +157,7 @@ export class MusicPlayerUI {
 
         // When the browser finishes seeking to the new position
         this.audioPlayer.onseeked = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             this.isSeeking = false;
             this.setLoading(false);
             // Restart the progress loop to ensure UI keeps updating
@@ -167,7 +167,7 @@ export class MusicPlayerUI {
         };
 
         this.audioPlayer.onended = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             if (this.isLoopEnabled) {
                 this.audioPlayer.play();
             } else {
@@ -176,14 +176,14 @@ export class MusicPlayerUI {
         };
 
         this.audioPlayer.onerror = () => {
-            if (this.suppressPlaybackEvents) return;
+            if (this.suppressPlaybackEvents) {return;}
             console.warn('[RENE Music] Audio element error');
             this.onFallback();
         };
     }
 
     private render(track: Track, hasPrev: boolean, hasNext: boolean) {
-        if (!this.container) return;
+        if (!this.container) {return;}
         this.container.innerHTML = `
             <div class="player-content">
                 <div class="player-progress">
@@ -218,7 +218,7 @@ export class MusicPlayerUI {
 
     private refreshRepeatButton() {
         const repeatBtn = $('#repeat-btn');
-        if (!repeatBtn) return;
+        if (!repeatBtn) {return;}
         repeatBtn.classList.toggle('active', this.isLoopEnabled);
         repeatBtn.setAttribute('aria-pressed', this.isLoopEnabled ? 'true' : 'false');
         repeatBtn.innerHTML = this.getRepeatIconSvg();
@@ -247,7 +247,7 @@ export class MusicPlayerUI {
     private updateTimeDisplay() {
         const curEl = $('#current-time');
         const totEl = $('#total-time');
-        if (!curEl || !totEl) return;
+        if (!curEl || !totEl) {return;}
 
         const cur = this.audioPlayer.currentTime || 0;
         const dur = this.audioPlayer.duration || 0;
@@ -266,7 +266,7 @@ export class MusicPlayerUI {
     /** Custom progress bar drag/click handling — never disabled by loading states */
     private setupProgressBarEvents() {
         const track = $('#progress-track');
-        if (!track) return;
+        if (!track) {return;}
 
         const seekToPosition = (clientX: number) => {
             const rect = track.getBoundingClientRect();
@@ -277,7 +277,7 @@ export class MusicPlayerUI {
 
         // Click to seek
         track.addEventListener('mousedown', (e: MouseEvent) => {
-            if (this.isLoadingState) return;
+            if (this.isLoadingState) {return;}
             this.isSeeking = true;
             seekToPosition(e.clientX);
             track.classList.add('is-dragging');
@@ -298,7 +298,7 @@ export class MusicPlayerUI {
 
         // Touch support
         track.addEventListener('touchstart', (e: TouchEvent) => {
-            if (this.isLoadingState) return;
+            if (this.isLoadingState) {return;}
             this.isSeeking = true;
             seekToPosition(e.touches[0].clientX);
             track.classList.add('is-dragging');
@@ -352,7 +352,7 @@ export class MusicPlayerUI {
             this.audioPlayer.currentTime = val * dur;
             // Update the timer display immediately so it feels responsive
             const curEl = $('#current-time');
-            if (curEl) curEl.textContent = formatDuration(Math.floor(val * dur));
+            if (curEl) {curEl.textContent = formatDuration(Math.floor(val * dur));}
         }
     }
 
@@ -361,14 +361,14 @@ export class MusicPlayerUI {
         const fill = $('#progress-fill');
         const thumb = $('#progress-thumb');
         const pct = Math.max(0, Math.min(100, ratio * 100));
-        if (fill) fill.style.width = `${pct}%`;
-        if (thumb) thumb.style.left = `${pct}%`;
+        if (fill) {fill.style.width = `${pct}%`;}
+        if (thumb) {thumb.style.left = `${pct}%`;}
     }
 
     private startProgressLoop() {
         this.stopProgressLoop();
         const update = () => {
-            if (!this.isPlaying && this.audioPlayer.paused) return;
+            if (!this.isPlaying && this.audioPlayer.paused) {return;}
             const cur = this.audioPlayer.currentTime;
 
             let dur = this.audioPlayer.duration;
@@ -389,7 +389,7 @@ export class MusicPlayerUI {
         this.progressTimer = requestAnimationFrame(update);
     }
 
-    private stopProgressLoop() { if (this.progressTimer) cancelAnimationFrame(this.progressTimer); }
+    private stopProgressLoop() { if (this.progressTimer) {cancelAnimationFrame(this.progressTimer);} }
 
     private setLoading(loading: boolean) {
         this.isLoadingState = loading;

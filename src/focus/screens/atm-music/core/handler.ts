@@ -8,7 +8,7 @@ let streamServer: http.Server | null = null;
 let streamPort = 0;
 
 export function startAudioServer(): Promise<number> {
-    if (streamServer && streamPort > 0) return Promise.resolve(streamPort);
+    if (streamServer && streamPort > 0) {return Promise.resolve(streamPort);}
 
     streamServer = http.createServer(async (req, res) => {
         try {

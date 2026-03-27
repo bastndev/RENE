@@ -53,7 +53,7 @@ export class ProviderManager {
      * fill in if Netease has gaps or doesn't return enough results.
      */
     async searchAll(query: string): Promise<Track[]> {
-        if (!query || this.providers.length === 0) return [];
+        if (!query || this.providers.length === 0) {return [];}
 
         // Check cache first
         const cacheKey = query.trim().toLowerCase();
@@ -107,7 +107,7 @@ export class ProviderManager {
      */
     async getStreamUrl(providerName: string, trackId: string): Promise<string | null> {
         const provider = this.providers.find(p => p.name === providerName);
-        if (!provider) return null;
+        if (!provider) {return null;}
         return provider.getStreamUrl(trackId);
     }
 
@@ -151,19 +151,19 @@ export class ProviderManager {
             // 1. Provider priority (Netease first!)
             const aPrio = this.getProviderPriority(a.provider);
             const bPrio = this.getProviderPriority(b.provider);
-            if (aPrio !== bPrio) return aPrio - bPrio;
+            if (aPrio !== bPrio) {return aPrio - bPrio;}
 
             // 2. Full tracks before previews
-            if (a.isFullTrack && !b.isFullTrack) return -1;
-            if (!a.isFullTrack && b.isFullTrack) return 1;
+            if (a.isFullTrack && !b.isFullTrack) {return -1;}
+            if (!a.isFullTrack && b.isFullTrack) {return 1;}
 
             // 3. Exact query matches before partial
             const aTitle = normalize(a.title);
             const bTitle = normalize(b.title);
             const aExact = aTitle === qNorm || normalize(a.artist) === qNorm;
             const bExact = bTitle === qNorm || normalize(b.artist) === qNorm;
-            if (aExact && !bExact) return -1;
-            if (!aExact && bExact) return 1;
+            if (aExact && !bExact) {return -1;}
+            if (!aExact && bExact) {return 1;}
 
             return 0;
         });

@@ -7,7 +7,7 @@ import { buildGradientBanner } from '../../../../shared/ui-ux/gradient-banner';
  * Prevents XSS via CSS url() injection.
  */
 function isSafeImageUrl(url: string): boolean {
-    if (!url || typeof url !== 'string') return false;
+    if (!url || typeof url !== 'string') {return false;}
     try {
         const parsed = new URL(url.trim());
         return parsed.protocol === 'https:';
@@ -44,7 +44,7 @@ export class MusicResultsUI {
     }
 
     public showSkeleton() {
-        if (!this.container) return;
+        if (!this.container) {return;}
         this.container.innerHTML = '';
         for (let i = 0; i < 6; i++) {
             const el = document.createElement('div');
@@ -61,7 +61,7 @@ export class MusicResultsUI {
     }
 
     public render(items: Track[]) {
-        if (!this.container) return;
+        if (!this.container) {return;}
         this.container.innerHTML = '';
 
         if (!items || items.length === 0) {
@@ -91,8 +91,8 @@ export class MusicResultsUI {
             thumb.appendChild(initial);
 
             let providerName = item.provider.charAt(0).toUpperCase() + item.provider.slice(1);
-            if (item.provider === 'netease') providerName = 'NetEase';
-            if (item.provider === 'jiosaavn') providerName = 'JioSaavn';
+            if (item.provider === 'netease') {providerName = 'NetEase';}
+            if (item.provider === 'jiosaavn') {providerName = 'JioSaavn';}
             
             const qualityBadge = item.quality ? `<span class="result-badge quality">${item.quality}</span>` : '';
             const typeBadge = item.isFullTrack ? '<span class="result-badge full">Full</span>' : '<span class="result-badge preview">30s Preview</span>';
@@ -157,7 +157,7 @@ export class MusicResultsUI {
     }
 
     private updateButtonState() {
-        if (!this.queryBtn) return;
+        if (!this.queryBtn) {return;}
         const q = (this.queryInput?.value || '').trim();
         const isUnchanged = q === this.lastQuery && q.length > 0;
         

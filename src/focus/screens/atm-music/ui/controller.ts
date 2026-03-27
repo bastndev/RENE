@@ -47,7 +47,7 @@ export class AtmMusicController {
 
     private mountBaseHtml() {
         const root = $('#atm-music-root');
-        if (!root) return;
+        if (!root) {return;}
         root.innerHTML = `
             <section id="screen-results" class="screen">
                 <div class="screen-header">
@@ -74,7 +74,7 @@ export class AtmMusicController {
         window.addEventListener('message', (event: MessageEvent) => {
             const msg = event.data as WebviewMessage;
             if (msg.type === 'config' && msg.streamPort) {
-                (window as any).STREAM_PORT = msg.streamPort;
+                window.STREAM_PORT = msg.streamPort;
             } else if (msg.type === 'searchResults') {
                 this.tracks = msg.results || [];
                 this.hasCachedSearch = true;
@@ -132,7 +132,7 @@ export class AtmMusicController {
     }
 
     private playPrev() {
-        if (this.currentIndex > 0) this.selectTrack(this.currentIndex - 1);
+        if (this.currentIndex > 0) {this.selectTrack(this.currentIndex - 1);}
     }
 
     private backToSearch() {
@@ -195,7 +195,7 @@ export class AtmMusicController {
     }
 
     private updateMusicLabelState() {
-        if (!this.musicLabelEl) return;
+        if (!this.musicLabelEl) {return;}
         const canGo = (this.currentIndex > -1 || this.hasCachedSearch);
         this.musicLabelEl.classList.toggle('is-linkable', canGo);
     }

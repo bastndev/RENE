@@ -62,10 +62,10 @@ export class NeteaseProvider implements IMusicProvider {
             const validTracks: Track[] = [];
             songs.forEach((song) => {
                 const streamUrl = urlMap.get(song.id);
-                if (!streamUrl) return;
+                if (!streamUrl) {return;}
 
                 let picUrl = song.al?.picUrl ? song.al.picUrl.replace(/^http:\/\//i, 'https://') : '';
-                if (picUrl) picUrl += '?param=300y300';
+                if (picUrl) {picUrl += '?param=300y300';}
 
                 validTracks.push({
                     id: `netease_${song.id}`,
@@ -85,7 +85,7 @@ export class NeteaseProvider implements IMusicProvider {
             });
 
             return validTracks;
-        } catch (error) {
+        } catch {
 
             return [];
         }
@@ -94,7 +94,8 @@ export class NeteaseProvider implements IMusicProvider {
     async getStreamUrl(trackId: string): Promise<string | null> {
         try {
             const urlResult = await song_url({ id: trackId, br: 320000 });
-            const url = (urlResult.body as any).data?.[0]?.url;
+            const urls = (urlResult.body as unknown as NeteaseSongUrlResponse).data;
+            const url = urls?.[0]?.url;
             return url ? url.replace(/^http:\/\//i, 'https://') : null;
         } catch {
             return null;
